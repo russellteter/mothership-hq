@@ -14,7 +14,379 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      artifacts: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          metadata_json: Json | null
+          type: string
+          uri: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          metadata_json?: Json | null
+          type: string
+          uri: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          metadata_json?: Json | null
+          type?: string
+          uri?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artifacts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_tags: {
+        Row: {
+          business_id: string
+          tag_id: string
+        }
+        Insert: {
+          business_id: string
+          tag_id: string
+        }
+        Update: {
+          business_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_tags_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      businesses: {
+        Row: {
+          address_json: Json | null
+          created_at: string
+          franchise_bool: boolean | null
+          id: string
+          lat: number | null
+          lng: number | null
+          name: string
+          phone: string | null
+          updated_at: string
+          vertical: string | null
+          website: string | null
+        }
+        Insert: {
+          address_json?: Json | null
+          created_at?: string
+          franchise_bool?: boolean | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+          vertical?: string | null
+          website?: string | null
+        }
+        Update: {
+          address_json?: Json | null
+          created_at?: string
+          franchise_bool?: boolean | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          vertical?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          payload_json: Json | null
+          processed_flags: Json | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          payload_json?: Json | null
+          processed_flags?: Json | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          payload_json?: Json | null
+          processed_flags?: Json | null
+          type?: string
+        }
+        Relationships: []
+      }
+      lead_views: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          rank: number | null
+          score: number | null
+          search_job_id: string
+          subscores_json: Json | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          rank?: number | null
+          score?: number | null
+          search_job_id: string
+          subscores_json?: Json | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          rank?: number | null
+          score?: number | null
+          search_job_id?: string
+          subscores_json?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_views_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_views_search_job_id_fkey"
+            columns: ["search_job_id"]
+            isOneToOne: false
+            referencedRelation: "search_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          text: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          text: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      people: {
+        Row: {
+          business_id: string
+          confidence: number | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          role: string | null
+          source_url: string | null
+        }
+        Insert: {
+          business_id: string
+          confidence?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          role?: string | null
+          source_url?: string | null
+        }
+        Update: {
+          business_id?: string
+          confidence?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          role?: string | null
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_jobs: {
+        Row: {
+          created_at: string
+          dsl_json: Json
+          error_text: string | null
+          id: string
+          status: string
+          summary_stats: Json | null
+        }
+        Insert: {
+          created_at?: string
+          dsl_json: Json
+          error_text?: string | null
+          id?: string
+          status?: string
+          summary_stats?: Json | null
+        }
+        Update: {
+          created_at?: string
+          dsl_json?: Json
+          error_text?: string | null
+          id?: string
+          status?: string
+          summary_stats?: Json | null
+        }
+        Relationships: []
+      }
+      signals: {
+        Row: {
+          business_id: string
+          confidence: number | null
+          detected_at: string
+          evidence_snippet: string | null
+          evidence_url: string | null
+          id: string
+          overridden_by_user: boolean | null
+          source_key: string
+          type: string
+          value_json: Json
+        }
+        Insert: {
+          business_id: string
+          confidence?: number | null
+          detected_at?: string
+          evidence_snippet?: string | null
+          evidence_url?: string | null
+          id?: string
+          overridden_by_user?: boolean | null
+          source_key: string
+          type: string
+          value_json: Json
+        }
+        Update: {
+          business_id?: string
+          confidence?: number | null
+          detected_at?: string
+          evidence_snippet?: string | null
+          evidence_url?: string | null
+          id?: string
+          overridden_by_user?: boolean | null
+          source_key?: string
+          type?: string
+          value_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signals_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      status_logs: {
+        Row: {
+          business_id: string
+          changed_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          changed_at?: string
+          id?: string
+          status: string
+        }
+        Update: {
+          business_id?: string
+          changed_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          id: string
+          label: string
+        }
+        Insert: {
+          id?: string
+          label: string
+        }
+        Update: {
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
