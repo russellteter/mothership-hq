@@ -94,7 +94,7 @@ interface Signal {
   source_key: string;
 }
 
-async function searchGooglePlaces(query: string, location: string): Promise<any[]> {
+async function searchGooglePlaces(query: string, location: string, includedTypes: string[] = ['establishment']): Promise<any[]> {
   // Use the new Places API (New) with nearbySearch
   const searchUrl = 'https://places.googleapis.com/v1/places:searchNearby';
   
@@ -106,7 +106,7 @@ async function searchGooglePlaces(query: string, location: string): Promise<any[
   }
   
   const requestBody = {
-    includedTypes: ['dentist', 'dental_clinic'], // Will be dynamic based on vertical
+    includedTypes: includedTypes,
     locationRestriction: {
       circle: {
         center: {
@@ -366,7 +366,7 @@ serve(async (req) => {
     const searchQuery = `${businessTypes[0]} in ${location}`;
     
     // Search Google Places
-    const places = await searchGooglePlaces(searchQuery, location);
+    const places = await searchGooglePlaces(searchQuery, location, businessTypes);
     console.log(`Found ${places.length} places`);
     
     const processedBusinesses: Business[] = [];

@@ -39,17 +39,23 @@ serve(async (req) => {
 
     // Handle both GET and POST requests
     let searchJobId: string;
+    let status: string | null = null;
+    let limit = 50;
+    let offset = 0;
     
     if (req.method === 'GET') {
       const url = new URL(req.url);
       searchJobId = url.searchParams.get('search_job_id') || '';
+      status = url.searchParams.get('status');
+      limit = parseInt(url.searchParams.get('limit') || '50');
+      offset = parseInt(url.searchParams.get('offset') || '0');
     } else {
       const body = await req.json();
       searchJobId = body.search_job_id;
+      status = body.status;
+      limit = parseInt(body.limit || '50');
+      offset = parseInt(body.offset || '0');
     }
-    const status = url.searchParams.get('status');
-    const limit = parseInt(url.searchParams.get('limit') || '50');
-    const offset = parseInt(url.searchParams.get('offset') || '0');
 
     if (!searchJobId) {
       return new Response(
