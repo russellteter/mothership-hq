@@ -95,6 +95,11 @@ interface Signal {
 }
 
 async function searchGooglePlaces(query: string, location: string, includedTypes: string[] = ['establishment']): Promise<any[]> {
+  if (!googlePlacesApiKey) {
+    console.error('GOOGLE_PLACES_API_KEY not found in environment variables');
+    return [];
+  }
+  
   // Use the new Places API (New) with nearbySearch
   const searchUrl = 'https://places.googleapis.com/v1/places:searchNearby';
   
@@ -120,7 +125,8 @@ async function searchGooglePlaces(query: string, location: string, includedTypes
     languageCode: 'en'
   };
   
-  console.log('Searching Google Places (New API):', searchUrl);
+  console.log(`Searching Places API for types: ${includedTypes.join(', ')} near ${location}`);
+  console.log('Request body:', JSON.stringify(requestBody, null, 2));
   
   const response = await fetch(searchUrl, {
     method: 'POST',
@@ -135,24 +141,49 @@ async function searchGooglePlaces(query: string, location: string, includedTypes
   const data = await response.json();
   
   if (!response.ok) {
-    console.error('Google Places API error:', data);
+    console.error('Places API HTTP error:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: data.error || data
+    });
     return [];
+  }
+  
+  console.log(`Places API returned ${data.places?.length || 0} results`);
+  if (data.places?.length > 0) {
+    console.log('Sample place result:', JSON.stringify(data.places[0], null, 2));
   }
   
   return data.places || [];
 }
 
 async function geocodeLocation(location: string): Promise<{lat: number, lng: number} | null> {
+  if (!googlePlacesApiKey) {
+    console.error('GOOGLE_PLACES_API_KEY not found in environment variables');
+    return null;
+  }
+  
   try {
+    console.log(`Geocoding location: ${location}`);
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${googlePlacesApiKey}`;
     const response = await fetch(geocodeUrl);
     const data = await response.json();
     
+    console.log('Geocoding response status:', data.status);
+    console.log('Geocoding response:', JSON.stringify(data, null, 2));
+    
     if (data.status === 'OK' && data.results.length > 0) {
       const location = data.results[0].geometry.location;
+      console.log(`Geocoded ${location} to lat: ${location.lat}, lng: ${location.lng}`);
       return { lat: location.lat, lng: location.lng };
+    } else {
+      console.error('Geocoding failed:', {
+        status: data.status,
+        error_message: data.error_message,
+        results_count: data.results?.length || 0
+      });
+      return null;
     }
-    return null;
   } catch (error) {
     console.error('Geocoding error:', error);
     return null;
