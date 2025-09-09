@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, LeadQuery, ParseResult, SearchJob } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
