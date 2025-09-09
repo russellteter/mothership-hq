@@ -1,20 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Download, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2 } from 'lucide-react';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
 import { LeadDetailDrawer } from '@/components/dashboard/LeadDetailDrawer';
 import { BoardView } from '@/components/dashboard/BoardView';
 import { Lead } from '@/types/lead';
 import { useLeadSearch } from '@/hooks/useLeadSearch';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeView, setActiveView] = useState<'table' | 'board'>('table');
+  
+  const { user, loading, signOut, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
   const {
     isSearching,
@@ -26,6 +31,31 @@ const Index = () => {
     addNote,
     addTag
   } = useLeadSearch();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out successfully"
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleSearch = async (prompt: string) => {
     try {
@@ -114,7 +144,18 @@ const Index = () => {
       <SearchPanel onSearch={handleSearch} isSearching={isSearching} />
       
       <div className="flex-1 flex flex-col">
+        {/* Header */}
         <div className="border-b border-border p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold">SMB Lead Finder</h1>
+              <p className="text-sm text-muted-foreground">Welcome back, {user?.email}</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'table' | 'board')}>

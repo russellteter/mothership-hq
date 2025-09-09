@@ -95,33 +95,89 @@ interface Signal {
 }
 
 async function searchGooglePlaces(query: string, location: string): Promise<any[]> {
-  const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}&radius=50000&key=${googlePlacesApiKey}`;
+  // Use the new Places API (New) with nearbySearch
+  const searchUrl = 'https://places.googleapis.com/v1/places:searchNearby';
   
-  console.log('Searching Google Places:', searchUrl);
+  // Parse location to get coordinates (simplified for now)
+  const coords = await geocodeLocation(location);
+  if (!coords) {
+    console.error('Failed to geocode location:', location);
+    return [];
+  }
   
-  const response = await fetch(searchUrl);
+  const requestBody = {
+    includedTypes: ['dentist', 'dental_clinic'], // Will be dynamic based on vertical
+    locationRestriction: {
+      circle: {
+        center: {
+          latitude: coords.lat,
+          longitude: coords.lng
+        },
+        radius: 50000.0
+      }
+    },
+    maxResultCount: 20,
+    languageCode: 'en'
+  };
+  
+  console.log('Searching Google Places (New API):', searchUrl);
+  
+  const response = await fetch(searchUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': googlePlacesApiKey,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri,places.location,places.businessStatus,places.priceLevel,places.rating,places.userRatingCount,places.types'
+    },
+    body: JSON.stringify(requestBody)
+  });
+  
   const data = await response.json();
   
-  if (data.status !== 'OK') {
+  if (!response.ok) {
     console.error('Google Places API error:', data);
     return [];
   }
   
-  return data.results || [];
+  return data.places || [];
+}
+
+async function geocodeLocation(location: string): Promise<{lat: number, lng: number} | null> {
+  try {
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${googlePlacesApiKey}`;
+    const response = await fetch(geocodeUrl);
+    const data = await response.json();
+    
+    if (data.status === 'OK' && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      return { lat: location.lat, lng: location.lng };
+    }
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
 }
 
 async function getPlaceDetails(placeId: string): Promise<any> {
-  const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,geometry,business_status,price_level,rating,user_ratings_total,types&key=${googlePlacesApiKey}`;
+  // Use the new Places API (New) for place details
+  const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}`;
   
-  const response = await fetch(detailsUrl);
-  const data = await response.json();
+  const response = await fetch(detailsUrl, {
+    method: 'GET',
+    headers: {
+      'X-Goog-Api-Key': googlePlacesApiKey,
+      'X-Goog-FieldMask': 'id,displayName,formattedAddress,internationalPhoneNumber,websiteUri,location,businessStatus,priceLevel,rating,userRatingCount,types'
+    }
+  });
   
-  if (data.status !== 'OK') {
-    console.error('Google Places Details API error:', data);
+  if (!response.ok) {
+    console.error('Google Places Details API error:', await response.text());
     return null;
   }
   
-  return data.result;
+  const data = await response.json();
+  return data;
 }
 
 async function analyzeWebsite(url: string): Promise<Signal[]> {
@@ -264,16 +320,36 @@ serve(async (req) => {
   }
 
   try {
+    // Get user from auth header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { dsl }: { dsl: LeadQuery } = await req.json();
     
     console.log('Starting search with DSL:', dsl);
     
-    // Create search job
+    // Create search job with user_id
     const { data: searchJob, error: jobError } = await supabase
       .from('search_jobs')
       .insert({
         dsl_json: dsl,
-        status: 'running'
+        status: 'running',
+        user_id: user.id
       })
       .select()
       .single();
@@ -298,21 +374,21 @@ serve(async (req) => {
     // Process each place
     for (const place of places.slice(0, Math.min(50, dsl.result_size.target))) {
       try {
-        // Get detailed place information
-        const details = await getPlaceDetails(place.place_id);
+        // Get detailed place information - place already has details from new API
+        const details = place;
         if (!details) continue;
         
-        // Parse address
-        const addressParts = details.formatted_address?.split(', ') || [];
+        // Parse address from new API format
+        const addressParts = details.formattedAddress?.split(', ') || [];
         const state = addressParts[addressParts.length - 2]?.split(' ')[0] || '';
         const city = addressParts[addressParts.length - 3] || '';
         
         const business: Business = {
           id: crypto.randomUUID(),
-          name: details.name,
+          name: details.displayName?.text || details.displayName,
           vertical: dsl.vertical,
-          website: details.website,
-          phone: details.formatted_phone_number,
+          website: details.websiteUri,
+          phone: details.internationalPhoneNumber,
           address_json: {
             street: addressParts[0] || '',
             city: city,
@@ -320,10 +396,10 @@ serve(async (req) => {
             zip: addressParts[addressParts.length - 2]?.split(' ')[1] || '',
             country: 'US'
           },
-          lat: details.geometry?.location?.lat,
-          lng: details.geometry?.location?.lng,
+          lat: details.location?.latitude,
+          lng: details.location?.longitude,
           franchise_bool: false,
-          google_place_id: place.place_id
+          google_place_id: details.id
         };
         
         // Insert business
@@ -352,21 +428,21 @@ serve(async (req) => {
             type: 'no_website',
             value_json: true,
             confidence: 0.95,
-            evidence_url: `https://maps.google.com/place?place_id=${place.place_id}`,
+            evidence_url: `https://maps.google.com/place?place_id=${details.id}`,
             evidence_snippet: 'No website listed in Google Places',
             source_key: 'google_places'
           });
         }
         
         // Add review count signal
-        if (details.user_ratings_total) {
+        if (details.userRatingCount) {
           signals.push({
             business_id: insertedBusiness.id,
             type: 'review_count',
-            value_json: details.user_ratings_total,
+            value_json: details.userRatingCount,
             confidence: 0.95,
-            evidence_url: `https://maps.google.com/place?place_id=${place.place_id}`,
-            evidence_snippet: `${details.user_ratings_total} reviews on Google`,
+            evidence_url: `https://maps.google.com/place?place_id=${details.id}`,
+            evidence_snippet: `${details.userRatingCount} reviews on Google`,
             source_key: 'google_places'
           });
         }

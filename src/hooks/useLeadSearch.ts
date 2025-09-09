@@ -27,9 +27,19 @@ export function useLeadSearch() {
     setSearchResults([]);
     
     try {
-      // Start the search job
+      // Get the current session to include auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session. Please sign in.');
+      }
+      
+      // Start the search job with auth token
       const { data, error } = await supabase.functions.invoke('search-leads', {
-        body: { dsl }
+        body: { dsl },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
@@ -67,23 +77,25 @@ export function useLeadSearch() {
       }
 
       try {
-        // Use the direct URL approach to get results
-        const response = await fetch(
-          `https://kwmoaikxwfnsisgaejyq.supabase.co/functions/v1/get-search-results?search_job_id=${jobId}`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3bW9haWt4d2Zuc2lzZ2FlanlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NTQ5ODcsImV4cCI6MjA3MzAzMDk4N30.VXtjgno3GFEEMlDx_CInUVEOeD20DgxZNRMMJehrq7U`,
-              'Content-Type': 'application/json',
-            }
+        // Get current session for auth
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          throw new Error('No active session');
+        }
+        
+        // Use the Supabase client instead of direct fetch
+        const { data: resultData, error } = await supabase.functions.invoke('get-search-results', {
+          body: { search_job_id: jobId },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
           }
-        );
+        });
 
-        if (!response.ok) {
+        if (error) {
           throw new Error('Failed to fetch results');
         }
 
-        const resultData = await response.json();
         
         if (resultData.search_job.status === 'completed') {
           setSearchResults(resultData.leads);

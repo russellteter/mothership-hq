@@ -18,8 +18,35 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const searchJobId = url.searchParams.get('search_job_id');
+    // Get user from auth header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle both GET and POST requests
+    let searchJobId: string;
+    
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      searchJobId = url.searchParams.get('search_job_id') || '';
+    } else {
+      const body = await req.json();
+      searchJobId = body.search_job_id;
+    }
     const status = url.searchParams.get('status');
     const limit = parseInt(url.searchParams.get('limit') || '50');
     const offset = parseInt(url.searchParams.get('offset') || '0');
