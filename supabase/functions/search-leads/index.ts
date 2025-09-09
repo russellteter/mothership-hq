@@ -429,9 +429,10 @@ serve(async (req) => {
           },
           lat: details.location?.latitude,
           lng: details.location?.longitude,
-          franchise_bool: false,
-          google_place_id: details.id
+          franchise_bool: false
         };
+        
+        console.log('Inserting business:', business.name);
         
         // Insert business
         const { data: insertedBusiness, error: businessError } = await supabase
@@ -441,7 +442,13 @@ serve(async (req) => {
           .single();
         
         if (businessError) {
-          console.error('Failed to insert business:', businessError);
+          console.error('Failed to insert business:', {
+            business_name: business.name,
+            error: businessError,
+            error_code: businessError.code,
+            error_message: businessError.message,
+            error_details: businessError.details
+          });
           continue;
         }
         
