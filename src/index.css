@@ -109,14 +109,14 @@ All colors MUST be HSL.
     --popover: 15 15 15;
     --popover-foreground: 239 239 239;
 
-    /* Primary: Accent green for dark mode */
-    --primary: 142 82% 43%;          /* #00DB76 */
-    --primary-foreground: 0 0% 0%;
-    --primary-glow: 142 100% 31%;    /* #009C54 */
+    /* Primary: Professional emerald for dark mode */
+    --primary: 160 84% 39%;          /* Professional emerald */
+    --primary-foreground: 220 9% 95%;
+    --primary-glow: 160 100% 45%;
 
     /* Accent colors for dark mode */
-    --accent-green: 142 82% 43%;     /* #00DB76 */
-    --accent-green-2: 142 100% 31%;  /* #009C54 */
+    --accent-green: 160 84% 39%;     /* Professional emerald */
+    --accent-green-2: 160 100% 31%;  /* Darker emerald */
     --accent-blue: 203 96% 48%;      /* #1096DF */
 
     --secondary: 215 15% 15%;
@@ -125,13 +125,13 @@ All colors MUST be HSL.
     --muted: 215 15% 15%;
     --muted-foreground: 154 163 167; /* #9A9FA7 */
 
-    --accent: 142 82% 43%;           /* Green accent in dark mode */
-    --accent-foreground: 0 0% 0%;
+    --accent: 160 84% 39%;           /* Professional emerald in dark mode */
+    --accent-foreground: 220 9% 95%;
 
     /* Status colors for dark mode */
-    --success: 142 82% 43%;
-    --success-foreground: 0 0% 0%;
-    --success-light: 142 76% 8%;
+    --success: 160 84% 39%;
+    --success-foreground: 220 9% 95%;
+    --success-light: 160 76% 8%;
 
     --warning: 33 100% 71%;
     --warning-foreground: 0 0% 0%;
@@ -142,7 +142,7 @@ All colors MUST be HSL.
 
     --border: 255 255 255 / 0.06;    /* rgba(255,255,255,0.06) */
     --input: 215 15% 20%;
-    --ring: 142 82% 43%;
+    --ring: 160 84% 39%;
 
     /* Dark mode gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--accent-green)), hsl(var(--accent-green-2)));
