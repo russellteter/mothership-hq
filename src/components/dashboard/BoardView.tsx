@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -137,10 +137,10 @@ export function BoardView({ leads, onLeadSelect, onStatusChange }: BoardViewProp
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            onClick={(e) => {
+                            onClick={useCallback((e: React.MouseEvent) => {
                               e.stopPropagation();
                               onLeadSelect(lead);
-                            }}
+                            }, [lead, onLeadSelect])}
                             className="h-6 px-2"
                           >
                             <Eye className="w-3 h-3" />

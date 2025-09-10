@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -53,6 +53,7 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-muted-foreground">Finding leads...</p>
+          <p className="text-xs text-muted-foreground mt-2">This may take up to 2 minutes</p>
         </div>
       </div>
     );
@@ -98,7 +99,7 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
                 <TableRow 
                   key={lead.business.id}
                   className={`cursor-pointer hover:bg-muted/50 ${selectedLead?.business.id === lead.business.id ? 'bg-muted' : ''}`}
-                  onClick={() => onLeadSelect(lead)}
+                  onClick={useCallback(() => onLeadSelect(lead), [lead, onLeadSelect])}
                 >
                   <TableCell className="font-medium text-muted-foreground">
                     #{lead.rank}
@@ -155,14 +156,24 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onLeadSelect(lead); }}>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={useCallback((e: React.MouseEvent) => { 
+                          e.stopPropagation(); 
+                          onLeadSelect(lead); 
+                        }, [lead, onLeadSelect])}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                       {lead.website && (
                         <Button 
                           size="sm" 
                           variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); window.open(lead.website, '_blank'); }}
+                          onClick={useCallback((e: React.MouseEvent) => { 
+                            e.stopPropagation(); 
+                            window.open(lead.website, '_blank'); 
+                          }, [lead.website])}
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Button>

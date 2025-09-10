@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Search, Sparkles } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface SearchPanelProps {
   onSearch: (prompt: string) => void;
@@ -20,17 +21,25 @@ const PROMPT_EXAMPLES = [
 export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (prompt.trim()) {
-      onSearch(prompt);
+    if (prompt.trim() && !isSubmitting && !isSearching) {
+      setIsSubmitting(true);
+      try {
+        await onSearch(prompt);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
-  };
+  }, [prompt, onSearch, isSubmitting, isSearching]);
 
-  const handleExampleClick = (example: string) => {
-    setPrompt(example);
-  };
+  const handleExampleClick = useCallback((example: string) => {
+    if (!isSearching && !isSubmitting) {
+      setPrompt(example);
+    }
+  }, [isSearching, isSubmitting]);
 
   return (
     <div className="w-80 h-full bg-card border-r border-border flex flex-col">
@@ -53,7 +62,7 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="e.g., dentists in Columbia, SC with no chat widget"
                 className="pr-10"
-                disabled={isSearching}
+                disabled={isSearching || isSubmitting}
               />
               <Search className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground" />
             </div>
@@ -61,11 +70,11 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
           
           <Button 
             type="submit" 
-            disabled={!prompt.trim() || isSearching}
+            disabled={!prompt.trim() || isSearching || isSubmitting}
             className="w-full"
             variant="default"
           >
-            {isSearching ? 'Searching...' : 'Find Leads'}
+            {isSearching || isSubmitting ? 'Searching...' : 'Find Leads'}
           </Button>
         </form>
       </div>
@@ -78,7 +87,9 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
               <Badge
                 key={index}
                 variant="secondary"
-                className="cursor-pointer hover:bg-secondary/80 text-left justify-start w-full p-2 h-auto whitespace-normal"
+                className={`cursor-pointer hover:bg-secondary/80 text-left justify-start w-full p-2 h-auto whitespace-normal ${
+                  isSearching || isSubmitting ? 'opacity-50 pointer-events-none' : ''
+                }`}
                 onClick={() => handleExampleClick(example)}
               >
                 {example}

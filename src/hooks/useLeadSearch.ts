@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, LeadQuery, ParseResult, SearchJob } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
@@ -7,6 +7,8 @@ export function useLeadSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Lead[]>([]);
   const [currentSearchJob, setCurrentSearchJob] = useState<SearchJob | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const parsePrompt = async (prompt: string): Promise<ParseResult> => {
     try {
@@ -22,9 +24,22 @@ export function useLeadSearch() {
     }
   };
 
-  const searchLeads = async (dsl: LeadQuery): Promise<void> => {
+  const searchLeads = useCallback(async (dsl: LeadQuery): Promise<void> => {
+    // Cancel any existing search
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Clear any pending timeouts
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
     setIsSearching(true);
     setSearchResults([]);
+    
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
     
     try {
       // Get the current session to include auth token
@@ -88,8 +103,9 @@ export function useLeadSearch() {
       }
     } finally {
       setIsSearching(false);
+      abortControllerRef.current = null;
     }
-  };
+  }, []);
 
   const pollForResults = async (jobId: string): Promise<void> => {
     const maxAttempts = 60; // 5 minutes
@@ -149,7 +165,7 @@ export function useLeadSearch() {
     await poll();
   };
 
-  const updateLeadStatus = async (leadId: string, status: 'new' | 'qualified' | 'ignored'): Promise<void> => {
+  const updateLeadStatus = useCallback(async (leadId: string, status: 'new' | 'qualified' | 'ignored'): Promise<void> => {
     try {
       const { error } = await supabase
         .from('status_logs')
@@ -182,9 +198,9 @@ export function useLeadSearch() {
         variant: "destructive"
       });
     }
-  };
+  }, []);
 
-  const addNote = async (leadId: string, text: string): Promise<void> => {
+  const addNote = useCallback(async (leadId: string, text: string): Promise<void> => {
     try {
       const { error } = await supabase
         .from('notes')
@@ -208,9 +224,9 @@ export function useLeadSearch() {
         variant: "destructive"
       });
     }
-  };
+  }, []);
 
-  const addTag = async (leadId: string, tagLabel: string): Promise<void> => {
+  const addTag = useCallback(async (leadId: string, tagLabel: string): Promise<void> => {
     try {
       // First, create or get the tag
       const { data: tag, error: tagError } = await supabase
@@ -246,7 +262,7 @@ export function useLeadSearch() {
         variant: "destructive"
       });
     }
-  };
+  }, []);
 
   return {
     isSearching,
