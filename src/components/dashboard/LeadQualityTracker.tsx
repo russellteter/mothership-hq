@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -43,86 +44,137 @@ export function LeadQualityTracker() {
   const loadQualityMetrics = async () => {
     setLoading(true);
     try {
-      // Mock quality tracking data
-      const mockMetrics: QualityMetric[] = [
+      // Get real data from Supabase
+      const { data: leadViews } = await supabase
+        .from('lead_views')
+        .select(`
+          id,
+          score,
+          business:businesses!inner(
+            id,
+            signals!inner(
+              id,
+              type,
+              confidence,
+              evidence_url,
+              overridden_by_user
+            ),
+            people!inner(id, name, email, phone)
+          )
+        `);
+
+      if (!leadViews || leadViews.length === 0) {
+        setMetrics([]);
+        setFunnel([]);
+        return;
+      }
+
+      // Calculate evidence quality (signals with evidence)
+      const allSignals = leadViews.flatMap(lv => (lv.business as any)?.signals || []);
+      const signalsWithEvidence = allSignals.filter(s => s.evidence_url);
+      const evidenceQuality = allSignals.length > 0 
+        ? Math.round((signalsWithEvidence.length / allSignals.length) * 100)
+        : 0;
+
+      // Calculate enrichment coverage (leads with contact info)
+      const leadsWithContacts = leadViews.filter(lv => {
+        const people = (lv.business as any)?.people || [];
+        return people.some((p: any) => p.email || p.phone);
+      });
+      const enrichmentCoverage = Math.round((leadsWithContacts.length / leadViews.length) * 100);
+
+      // Calculate precision (leads with scores > 70)
+      const highQualityLeads = leadViews.filter(lv => (lv.score || 0) >= 70);
+      const precision = Math.round((highQualityLeads.length / leadViews.length) * 100);
+
+      // Calculate signal accuracy (non-overridden signals)
+      const overriddenSignals = allSignals.filter(s => s.overridden_by_user);
+      const signalAccuracy = allSignals.length > 0 
+        ? Math.round(((allSignals.length - overriddenSignals.length) / allSignals.length) * 100)
+        : 100;
+
+      // Get status data for funnel
+      const { data: statusData } = await supabase
+        .from('status_logs')
+        .select('business_id, status')
+        .order('changed_at', { ascending: false });
+
+      const latestStatuses = new Map();
+      statusData?.forEach(status => {
+        if (!latestStatuses.has(status.business_id)) {
+          latestStatuses.set(status.business_id, status.status);
+        }
+      });
+
+      const qualifiedCount = Array.from(latestStatuses.values()).filter(status => status === 'qualified').length;
+      const newCount = Array.from(latestStatuses.values()).filter(status => status === 'new').length;
+
+      const realMetrics: QualityMetric[] = [
         {
           id: 'precision',
           name: 'Lead Precision',
-          value: 82,
+          value: precision,
           target: 80,
-          trend: 'up',
-          status: 'good',
-          description: 'Percentage of leads that meet search criteria'
+          trend: 'stable',
+          status: precision >= 80 ? 'good' : precision >= 60 ? 'warning' : 'poor',
+          description: 'High-scoring leads that meet criteria'
         },
         {
           id: 'enrichment',
           name: 'Enrichment Coverage',
-          value: 73,
+          value: enrichmentCoverage,
           target: 70,
           trend: 'stable',
-          status: 'good',
-          description: 'Leads with owner contact information'
+          status: enrichmentCoverage >= 70 ? 'good' : enrichmentCoverage >= 50 ? 'warning' : 'poor',
+          description: 'Leads with contact information'
         },
         {
           id: 'evidence',
           name: 'Evidence Quality',
-          value: 96,
+          value: evidenceQuality,
           target: 95,
-          trend: 'up',
-          status: 'good',
+          trend: 'stable',
+          status: evidenceQuality >= 95 ? 'good' : evidenceQuality >= 80 ? 'warning' : 'poor',
           description: 'Signals with supporting evidence'
-        },
-        {
-          id: 'response_time',
-          name: 'Response Time',
-          value: 45,
-          target: 120,
-          trend: 'up',
-          status: 'good',
-          description: 'Seconds to first 20 leads'
         },
         {
           id: 'signal_accuracy',
           name: 'Signal Accuracy',
-          value: 89,
+          value: signalAccuracy,
           target: 85,
-          trend: 'down',
-          status: 'warning',
+          trend: 'stable',
+          status: signalAccuracy >= 85 ? 'good' : signalAccuracy >= 70 ? 'warning' : 'poor',
           description: 'Correctly detected business signals'
         }
       ];
 
-      const mockFunnel: ConversionFunnel[] = [
+      const realFunnel: ConversionFunnel[] = [
         {
           stage: 'Leads Found',
-          count: 486,
+          count: leadViews.length,
           rate: 100,
           icon: <Target className="w-4 h-4" />
         },
         {
           stage: 'High Quality',
-          count: 398,
-          rate: 82,
+          count: highQualityLeads.length,
+          rate: precision,
           icon: <CheckCircle className="w-4 h-4" />
         },
         {
           stage: 'Qualified',
-          count: 90,
-          rate: 18.5,
+          count: qualifiedCount,
+          rate: leadViews.length > 0 ? Math.round((qualifiedCount / leadViews.length) * 100) : 0,
           icon: <Zap className="w-4 h-4" />
-        },
-        {
-          stage: 'Contacted',
-          count: 34,
-          rate: 7.0,
-          icon: <Clock className="w-4 h-4" />
         }
       ];
 
-      setMetrics(mockMetrics);
-      setFunnel(mockFunnel);
+      setMetrics(realMetrics);
+      setFunnel(realFunnel);
     } catch (error) {
       console.error('Error loading quality metrics:', error);
+      setMetrics([]);
+      setFunnel([]);
     } finally {
       setLoading(false);
     }
@@ -177,23 +229,23 @@ export function LeadQualityTracker() {
           
           return (
             <Card key={metric.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-2 ${status.bg} rounded-lg`}>
-                    <StatusIcon className={`w-5 h-5 ${status.color}`} />
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-2 ${status.bg} rounded-lg flex-shrink-0`}>
+                    <StatusIcon className={`w-4 h-4 ${status.color}`} />
                   </div>
                   {getTrendIcon(metric.trend)}
                 </div>
                 
                 <div className="space-y-2">
-                  <h3 className="font-semibold">{metric.name}</h3>
+                  <h3 className="font-medium text-sm">{metric.name}</h3>
                   <div className="flex items-end gap-1">
-                    <span className="text-2xl font-bold">{metric.value}</span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xl font-bold">{metric.value}</span>
+                    <span className="text-xs text-muted-foreground">
                       {metric.id === 'response_time' ? 's' : '%'}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{metric.description}</p>
+                  <p className="text-xs text-muted-foreground leading-tight">{metric.description}</p>
                   
                   <div className="pt-2">
                     <div className="flex justify-between text-xs mb-1">
@@ -248,14 +300,23 @@ export function LeadQualityTracker() {
             ))}
           </div>
           
-          <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-            <h4 className="font-medium mb-2">Optimization Opportunities</h4>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Improve signal accuracy to reduce false positives</li>
-              <li>• Focus on verticals with higher qualification rates</li>
-              <li>• Enhance owner identification for better reachability</li>
-            </ul>
-          </div>
+          {metrics.length > 0 && (
+            <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+              <h4 className="font-medium mb-2">Optimization Opportunities</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {metrics.find(m => m.id === 'signal_accuracy' && m.value < 85) && (
+                  <li>• Review and correct signal detection errors to improve accuracy</li>
+                )}
+                {metrics.find(m => m.id === 'enrichment' && m.value < 70) && (
+                  <li>• Focus on sources with better contact information coverage</li>
+                )}
+                {metrics.find(m => m.id === 'precision' && m.value < 80) && (
+                  <li>• Refine search criteria to improve lead quality</li>
+                )}
+                {metrics.length === 0 && <li>• Run searches to generate optimization insights</li>}
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

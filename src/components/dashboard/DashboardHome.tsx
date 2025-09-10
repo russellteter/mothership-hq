@@ -21,6 +21,7 @@ import { SearchJob } from '@/types/lead';
 import { useAuth } from '@/hooks/useAuth';
 import { SearchAnalytics } from './SearchAnalytics';
 import { LeadQualityTracker } from './LeadQualityTracker';
+import { SavedSearchesTable } from './SavedSearchesTable';
 
 interface DashboardStats {
   totalLeads: number;
@@ -231,6 +232,7 @@ export function DashboardHome({ onViewSearch, onStartNewSearch }: DashboardHomeP
       <Tabs defaultValue="searches" className="w-full">
         <TabsList>
           <TabsTrigger value="searches">Recent Searches</TabsTrigger>
+          <TabsTrigger value="saved">Saved Searches</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="quality">Quality Metrics</TabsTrigger>
           <TabsTrigger value="activity">Lead Activity</TabsTrigger>
@@ -296,6 +298,10 @@ export function DashboardHome({ onViewSearch, onStartNewSearch }: DashboardHomeP
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="saved" className="space-y-4">
+          <SavedSearchesTable onRunSearch={onStartNewSearch} />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">

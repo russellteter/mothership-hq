@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -52,37 +53,141 @@ export function SearchAnalytics() {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      // Mock analytics data - in real implementation, this would come from Supabase
-      const mockMetrics: SearchMetrics = {
-        totalSearches: 24,
-        totalLeadsFound: 486,
-        averageScore: 73,
-        topVertical: 'dentist',
-        topLocation: 'Columbia, SC',
-        conversionRate: 18.5,
-        qualifiedLeads: 90,
-        timeToFirstLead: 45
-      };
+      // Get real data from Supabase
+      const { data: searchJobs, error } = await supabase
+        .from('search_jobs')
+        .select(`
+          *,
+          lead_views!inner(
+            id,
+            score,
+            business:businesses!inner(
+              vertical,
+              address_json
+            )
+          )
+        `)
+        .eq('status', 'completed');
 
-      const mockVerticalData: VerticalPerformance[] = [
-        { vertical: 'dentist', searches: 12, leads: 240, avgScore: 78, conversionRate: 22.5 },
-        { vertical: 'law_firm', searches: 8, leads: 160, avgScore: 71, conversionRate: 15.6 },
-        { vertical: 'contractor', searches: 4, leads: 86, avgScore: 69, conversionRate: 12.8 }
-      ];
+      if (error) throw error;
 
-      const mockLocationData: LocationPerformance[] = [
-        { location: 'Columbia, SC', searches: 8, leads: 160, avgScore: 76 },
-        { location: 'Charleston, SC', searches: 6, leads: 120, avgScore: 74 },
-        { location: 'Atlanta, GA', searches: 4, leads: 86, avgScore: 72 },
-        { location: 'Dallas, TX', searches: 3, leads: 60, avgScore: 70 },
-        { location: 'Charlotte, NC', searches: 3, leads: 60, avgScore: 68 }
-      ];
+      if (!searchJobs || searchJobs.length === 0) {
+        // No data yet - set empty metrics
+        setMetrics({
+          totalSearches: 0,
+          totalLeadsFound: 0,
+          averageScore: 0,
+          topVertical: '',
+          topLocation: '',
+          conversionRate: 0,
+          qualifiedLeads: 0,
+          timeToFirstLead: 0
+        });
+        setVerticalData([]);
+        setLocationData([]);
+        return;
+      }
 
-      setMetrics(mockMetrics);
-      setVerticalData(mockVerticalData);
-      setLocationData(mockLocationData);
+      // Calculate real metrics from actual data
+      const totalSearches = searchJobs.length;
+      const totalLeadsFound = searchJobs.reduce((sum, job) => sum + (job.lead_views?.length || 0), 0);
+      
+      const allLeadViews = searchJobs.flatMap(job => job.lead_views || []);
+      const averageScore = allLeadViews.length > 0 
+        ? Math.round(allLeadViews.reduce((sum, lv) => sum + (lv.score || 0), 0) / allLeadViews.length)
+        : 0;
+
+      // Get qualified leads count from status_logs
+      const { data: qualifiedData } = await supabase
+        .from('status_logs')
+        .select('business_id')
+        .eq('status', 'qualified');
+      
+      const qualifiedLeads = qualifiedData?.length || 0;
+      const conversionRate = totalLeadsFound > 0 ? Math.round((qualifiedLeads / totalLeadsFound) * 100 * 10) / 10 : 0;
+
+      // Calculate vertical performance
+      const verticalStats = new Map<string, {searches: number, leads: number, scores: number[]}>();
+      searchJobs.forEach(job => {
+        job.lead_views?.forEach(lv => {
+          const vertical = (lv.business as any)?.vertical || 'unknown';
+          if (!verticalStats.has(vertical)) {
+            verticalStats.set(vertical, {searches: 0, leads: 0, scores: []});
+          }
+          const stats = verticalStats.get(vertical)!;
+          stats.leads++;
+          if (lv.score) stats.scores.push(lv.score);
+        });
+      });
+
+      const verticalData: VerticalPerformance[] = Array.from(verticalStats.entries())
+        .map(([vertical, stats]) => ({
+          vertical,
+          searches: stats.searches,
+          leads: stats.leads,
+          avgScore: stats.scores.length > 0 ? Math.round(stats.scores.reduce((a, b) => a + b, 0) / stats.scores.length) : 0,
+          conversionRate: 0 // Would need to join with status_logs for actual conversion
+        }))
+        .filter(v => v.leads > 0)
+        .sort((a, b) => b.leads - a.leads)
+        .slice(0, 5);
+
+      // Calculate location performance
+      const locationStats = new Map<string, {searches: number, leads: number, scores: number[]}>();
+      searchJobs.forEach(job => {
+        const dsl = job.dsl_json as any;
+        const location = dsl?.geo ? `${dsl.geo.city}, ${dsl.geo.state}` : 'Unknown';
+        if (!locationStats.has(location)) {
+          locationStats.set(location, {searches: 1, leads: 0, scores: []});
+        }
+        const stats = locationStats.get(location)!;
+        job.lead_views?.forEach(lv => {
+          stats.leads++;
+          if (lv.score) stats.scores.push(lv.score);
+        });
+      });
+
+      const locationData: LocationPerformance[] = Array.from(locationStats.entries())
+        .map(([location, stats]) => ({
+          location,
+          searches: stats.searches,
+          leads: stats.leads,
+          avgScore: stats.scores.length > 0 ? Math.round(stats.scores.reduce((a, b) => a + b, 0) / stats.scores.length) : 0
+        }))
+        .filter(l => l.leads > 0)
+        .sort((a, b) => b.leads - a.leads)
+        .slice(0, 5);
+
+      const topVertical = verticalData[0]?.vertical || '';
+      const topLocation = locationData[0]?.location || '';
+
+      setMetrics({
+        totalSearches,
+        totalLeadsFound,
+        averageScore,
+        topVertical,
+        topLocation,
+        conversionRate,
+        qualifiedLeads,
+        timeToFirstLead: 0 // Would need timestamp tracking for actual calculation
+      });
+      setVerticalData(verticalData);
+      setLocationData(locationData);
     } catch (error) {
       console.error('Error loading analytics:', error);
+      // Set empty state on error
+      setMetrics({
+        totalSearches: 0,
+        totalLeadsFound: 0,
+        averageScore: 0,
+        topVertical: '',
+        topLocation: '',
+        conversionRate: 0,
+        qualifiedLeads: 0,
+        timeToFirstLead: 0
+      });
+      setVerticalData([]);
+      setLocationData([]);
     } finally {
       setLoading(false);
     }
@@ -110,56 +215,56 @@ export function SearchAnalytics() {
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Activity className="w-5 h-5 text-primary" />
+              <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                <Activity className="w-4 h-4 text-primary" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{metrics.totalSearches}</p>
-                <p className="text-sm text-muted-foreground">Total Searches</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-bold truncate">{metrics.totalSearches}</p>
+                <p className="text-xs text-muted-foreground truncate">Total Searches</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600" />
+              <div className="p-2 bg-blue-500/10 rounded-lg flex-shrink-0">
+                <Users className="w-4 h-4 text-blue-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{metrics.totalLeadsFound}</p>
-                <p className="text-sm text-muted-foreground">Leads Found</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-bold truncate">{metrics.totalLeadsFound}</p>
+                <p className="text-xs text-muted-foreground truncate">Leads Found</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <Target className="w-5 h-5 text-green-600" />
+              <div className="p-2 bg-green-500/10 rounded-lg flex-shrink-0">
+                <Target className="w-4 h-4 text-green-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{metrics.averageScore}</p>
-                <p className="text-sm text-muted-foreground">Avg Score</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-bold truncate">{metrics.averageScore}</p>
+                <p className="text-xs text-muted-foreground truncate">Avg Score</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-500/10 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-yellow-600" />
+              <div className="p-2 bg-yellow-500/10 rounded-lg flex-shrink-0">
+                <TrendingUp className="w-4 h-4 text-yellow-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{metrics.conversionRate}%</p>
-                <p className="text-sm text-muted-foreground">Conversion Rate</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-bold truncate">{metrics.conversionRate}%</p>
+                <p className="text-xs text-muted-foreground truncate">Conversion Rate</p>
               </div>
             </div>
           </CardContent>
@@ -239,7 +344,10 @@ export function SearchAnalytics() {
                 <span className="text-sm font-medium text-green-700">Top Performer</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Dentist searches in Columbia, SC have the highest conversion rate at 22.5%
+                {metrics.topVertical && metrics.topLocation 
+                  ? `${metrics.topVertical} searches in ${metrics.topLocation} show strong performance`
+                  : 'Run more searches to see performance insights'
+                }
               </p>
             </div>
             
@@ -249,7 +357,10 @@ export function SearchAnalytics() {
                 <span className="text-sm font-medium text-blue-700">Speed Benchmark</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Average time to first lead is {metrics.timeToFirstLead}s (target: &lt;60s)
+                {metrics.totalSearches > 0 
+                  ? `Performance tracking enabled for ${metrics.totalSearches} searches`
+                  : 'Run searches to track performance metrics'
+                }
               </p>
             </div>
             
