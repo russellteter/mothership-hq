@@ -20,9 +20,15 @@ import {
   XCircle,
   AlertCircle,
   Plus,
-  Tag as TagIcon
+  Tag as TagIcon,
+  Brain,
+  Search as SearchIcon,
+  Loader2,
+  ArrowRight
 } from 'lucide-react';
 import { Lead } from '@/types/lead';
+import { useAIInsights } from '@/hooks/useAIInsights';
+import { useWebsiteAnalysis } from '@/hooks/useWebsiteAnalysis';
 
 interface LeadDetailDrawerProps {
   lead: Lead | null;
@@ -43,6 +49,9 @@ export function LeadDetailDrawer({
 }: LeadDetailDrawerProps) {
   const [newNote, setNewNote] = useState('');
   const [newTag, setNewTag] = useState('');
+  
+  const { isGenerating: isGeneratingInsights, insights, generateInsights, clearInsights } = useAIInsights();
+  const { isAnalyzing: isAnalyzingWebsite, analysis, analyzeWebsite, clearAnalysis } = useWebsiteAnalysis();
 
   if (!lead) return null;
 
@@ -65,6 +74,24 @@ export function LeadDetailDrawer({
       setNewTag('');
     }
   };
+
+  const handleGenerateInsights = async () => {
+    if (lead) {
+      await generateInsights(lead);
+    }
+  };
+
+  const handleAnalyzeWebsite = async () => {
+    if (lead) {
+      await analyzeWebsite(lead);
+    }
+  };
+
+  // Clear insights when lead changes
+  React.useEffect(() => {
+    clearInsights();
+    clearAnalysis();
+  }, [lead?.business.id, clearInsights, clearAnalysis]);
 
   const renderSignalIcon = (value: boolean | undefined, type: string) => {
     if (value === true) {
@@ -153,10 +180,11 @@ export function LeadDetailDrawer({
           </Card>
 
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="signals">Signals</TabsTrigger>
               <TabsTrigger value="contacts">Contacts</TabsTrigger>
+              <TabsTrigger value="insights">AI Insights</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
 
@@ -324,6 +352,154 @@ export function LeadDetailDrawer({
                 <div className="text-center py-8 text-muted-foreground">
                   No contact information available
                 </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="insights" className="space-y-4">
+              {/* AI Insights Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      AI Insights
+                    </CardTitle>
+                    <Button 
+                      size="sm" 
+                      onClick={handleGenerateInsights}
+                      disabled={isGeneratingInsights}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      {isGeneratingInsights ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Brain className="h-4 w-4" />
+                      )}
+                      {isGeneratingInsights ? 'Analyzing...' : 'Generate Insights'}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {insights ? (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Business Summary</h4>
+                        <p className="text-sm text-muted-foreground">{insights.summary}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Outreach Suggestion</h4>
+                        <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                          <p className="text-sm">{insights.outreachSuggestion}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Opportunity Score</h4>
+                        <div className="flex items-center gap-2">
+                          <div className="text-2xl font-bold text-primary">{insights.opportunityScore}/100</div>
+                          <div className="text-xs text-muted-foreground">AI Confidence</div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Key Insights</h4>
+                        <ul className="space-y-1">
+                          {insights.keyInsights.map((insight, index) => (
+                            <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <CheckCircle className="h-3 w-3 mt-0.5 text-success flex-shrink-0" />
+                              {insight}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Recommendations</h4>
+                        <ul className="space-y-1">
+                          {insights.recommendations.map((rec, index) => (
+                            <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <ArrowRight className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
+                              {rec}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-sm">Generate AI insights to get detailed analysis and recommendations for this lead.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Website Analysis Section */}
+              {lead.website && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <SearchIcon className="h-4 w-4" />
+                        Website Analysis
+                      </CardTitle>
+                      <Button 
+                        size="sm" 
+                        onClick={handleAnalyzeWebsite}
+                        disabled={isAnalyzingWebsite}
+                        variant="outline"
+                      >
+                        {isAnalyzingWebsite ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <SearchIcon className="h-4 w-4" />
+                        )}
+                        {isAnalyzingWebsite ? 'Analyzing...' : 'Analyze Website'}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {analysis ? (
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-sm mb-2">Business Summary</h4>
+                          <p className="text-sm text-muted-foreground">{analysis.summary}</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-sm mb-2">Services</h4>
+                            <ul className="space-y-1">
+                              {analysis.services.slice(0, 3).map((service, index) => (
+                                <li key={index} className="text-xs text-muted-foreground">• {service}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          
+                          <div>
+                            <h4 className="font-medium text-sm mb-2">Opportunities</h4>
+                            <ul className="space-y-1">
+                              {analysis.opportunities.slice(0, 3).map((opp, index) => (
+                                <li key={index} className="text-xs text-muted-foreground">• {opp}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="font-medium text-sm mb-2">Target Market</h4>
+                          <p className="text-sm text-muted-foreground">{analysis.targetMarket}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <SearchIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p className="text-sm">Analyze this lead's website to extract business insights, services, and opportunities.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
 

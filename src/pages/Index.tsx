@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2 } from 'lucide-react';
+import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search } from 'lucide-react';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
 import { LeadDetailDrawer } from '@/components/dashboard/LeadDetailDrawer';
 import { BoardView } from '@/components/dashboard/BoardView';
+import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { Lead } from '@/types/lead';
 import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,7 +17,8 @@ import { toast } from '@/hooks/use-toast';
 const Index = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'table' | 'board'>('table');
+  const [activeView, setActiveView] = useState<'dashboard' | 'table' | 'board'>('dashboard');
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
   
   const { user, loading, signOut, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -73,9 +75,24 @@ const Index = () => {
       // Start the search
       await searchLeads(parseResult.dsl);
       
+      // Switch to table view to see results
+      setActiveView('table');
+      setShowSearchPanel(false);
+      
     } catch (error) {
       console.error('Search failed:', error);
     }
+  };
+
+  const handleViewSearch = async (searchJob: any) => {
+    // Load the results for this search
+    // This would need implementation in useLeadSearch
+    setActiveView('table');
+  };
+
+  const handleStartNewSearch = () => {
+    setShowSearchPanel(true);
+    setActiveView('table');
   };
 
   const handleLeadSelect = (lead: Lead) => {
@@ -141,7 +158,7 @@ const Index = () => {
 
   return (
     <div className="h-screen flex bg-background">
-      <SearchPanel onSearch={handleSearch} isSearching={isSearching} />
+      {showSearchPanel && <SearchPanel onSearch={handleSearch} isSearching={isSearching} />}
       
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -158,8 +175,12 @@ const Index = () => {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'table' | 'board')}>
+              <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'dashboard' | 'table' | 'board')}>
                 <TabsList>
+                  <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                    <Home className="w-4 h-4" />
+                    Dashboard
+                  </TabsTrigger>
                   <TabsTrigger value="table" className="flex items-center gap-2">
                     <TableIcon className="w-4 h-4" />
                     Table View
@@ -182,20 +203,37 @@ const Index = () => {
               </div>
             </div>
             
-            <Button 
-              onClick={exportToCsv} 
-              variant="outline" 
-              className="flex items-center gap-2"
-              disabled={searchResults.length === 0}
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              {activeView !== 'dashboard' && (
+                <Button 
+                  onClick={() => setShowSearchPanel(!showSearchPanel)} 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  {showSearchPanel ? 'Hide Search' : 'Search'}
+                </Button>
+              )}
+              <Button 
+                onClick={exportToCsv} 
+                variant="outline" 
+                className="flex items-center gap-2"
+                disabled={searchResults.length === 0 || activeView === 'dashboard'}
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+            </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-hidden">
-          {activeView === 'table' ? (
+          {activeView === 'dashboard' ? (
+            <DashboardHome 
+              onViewSearch={handleViewSearch}
+              onStartNewSearch={handleStartNewSearch}
+            />
+          ) : activeView === 'table' ? (
             <LeadsTable
               leads={searchResults}
               selectedLead={selectedLead}
