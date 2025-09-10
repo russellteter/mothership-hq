@@ -53,6 +53,14 @@ export function LeadDetailDrawer({
   const { isGenerating: isGeneratingInsights, insights, generateInsights, clearInsights } = useAIInsights();
   const { isAnalyzing: isAnalyzingWebsite, analysis, analyzeWebsite, clearAnalysis } = useWebsiteAnalysis();
 
+  // Clear insights when lead changes - MUST be before early return
+  React.useEffect(() => {
+    if (lead) {
+      clearInsights();
+      clearAnalysis();
+    }
+  }, [lead?.business.id, clearInsights, clearAnalysis]);
+
   if (!lead) return null;
 
   const getScoreColor = (score: number) => {
@@ -87,11 +95,6 @@ export function LeadDetailDrawer({
     }
   };
 
-  // Clear insights when lead changes
-  React.useEffect(() => {
-    clearInsights();
-    clearAnalysis();
-  }, [lead?.business.id, clearInsights, clearAnalysis]);
 
   const renderSignalIcon = (value: boolean | undefined, type: string) => {
     if (value === true) {
