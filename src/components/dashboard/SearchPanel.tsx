@@ -53,17 +53,17 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
 
   return (
     <div className="w-80 h-full bg-card border-r border-border flex flex-col">
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-glow rounded-lg flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary-foreground" />
+      <div className="p-3 border-b border-border">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 bg-gradient-to-br from-primary to-primary-glow rounded flex items-center justify-center">
+            <Sparkles className="w-3 h-3 text-primary-foreground" />
           </div>
-          <h1 className="text-lg font-semibold">Mothership Leads</h1>
+          <h1 className="text-base font-semibold">Mothership Leads</h1>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
               Describe your ideal leads
             </label>
             <div className="relative">
@@ -71,17 +71,17 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="e.g., dentists in Columbia, SC with no chat widget"
-                className="pr-10"
+                className="pr-8 h-8 text-sm"
                 disabled={isSearching || isSubmitting}
               />
-              <Search className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute right-2 top-2 w-3 h-3 text-muted-foreground" />
             </div>
           </div>
           
           <Button 
             type="submit" 
             disabled={!debouncedPrompt.trim() || isSearching || isSubmitting}
-            className="w-full"
+            className="w-full h-8 text-sm"
             variant="default"
           >
             {isSearching || isSubmitting ? 'Searching...' : 'Find Leads'}
@@ -89,15 +89,15 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
         </form>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-3 space-y-3">
         <div>
-          <h3 className="text-sm font-medium mb-3">Example searches</h3>
-          <div className="space-y-2">
+          <h3 className="text-xs font-medium mb-2">Example searches</h3>
+          <div className="space-y-1">
             {PROMPT_EXAMPLES.map((example, index) => (
               <Badge
                 key={index}
                 variant="secondary"
-                className={`cursor-pointer hover:bg-secondary/80 text-left justify-start w-full p-2 h-auto whitespace-normal ${
+                className={`cursor-pointer hover:bg-secondary/80 text-left justify-start w-full p-1.5 h-auto whitespace-normal text-xs ${
                   isSearching || isSubmitting ? 'opacity-50 pointer-events-none' : ''
                 }`}
                 onClick={() => handleExampleClick(example)}

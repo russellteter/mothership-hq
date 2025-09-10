@@ -66,16 +66,16 @@ export function LeadsTable({
     const badges = [];
     
     if (signals.no_website) {
-      badges.push(<Badge key="no-website" variant="destructive" className="text-xs">No Website</Badge>);
+      badges.push(<Badge key="no-website" variant="destructive" className="text-xs px-1 py-0 text-xs">No Site</Badge>);
     }
     if (signals.has_chatbot === false) {
-      badges.push(<Badge key="no-chat" variant="warning" className="text-xs">No Chat</Badge>);
+      badges.push(<Badge key="no-chat" variant="warning" className="text-xs px-1 py-0">No Chat</Badge>);
     }
     if (signals.has_online_booking === false) {
-      badges.push(<Badge key="no-booking" variant="warning" className="text-xs">No Booking</Badge>);
+      badges.push(<Badge key="no-booking" variant="warning" className="text-xs px-1 py-0">No Book</Badge>);
     }
     if (signals.owner_identified) {
-      badges.push(<Badge key="owner" variant="success" className="text-xs">Owner ID'd</Badge>);
+      badges.push(<Badge key="owner" variant="success" className="text-xs px-1 py-0">Owner</Badge>);
     }
     
     return badges.slice(0, 3); // Show max 3 badges
@@ -110,109 +110,111 @@ export function LeadsTable({
   return (
     <div className="flex-1 flex flex-col">
       <Card className="h-full flex flex-col">
-        <div className="p-6 border-b border-border flex-shrink-0">
-          <h2 className="text-lg font-semibold">Search Results ({leads.length} leads)</h2>
+        <div className="p-3 border-b border-border flex-shrink-0">
+          <h2 className="text-base font-semibold">Search Results ({leads.length} leads)</h2>
         </div>
         <div className="flex-1 overflow-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                {onSelectionChange && <TableHead className="w-12"></TableHead>}
-                <TableHead className="w-12">Rank</TableHead>
-                <TableHead className="w-16">Score</TableHead>
-                <TableHead>Business</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Signals</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-20">Actions</TableHead>
+              <TableRow className="h-8">
+                {onSelectionChange && <TableHead className="w-10 p-2"></TableHead>}
+                <TableHead className="w-10 p-2 text-xs">Rank</TableHead>
+                <TableHead className="w-12 p-2 text-xs">Score</TableHead>
+                <TableHead className="p-2 text-xs">Business</TableHead>
+                <TableHead className="p-2 text-xs">Location</TableHead>
+                <TableHead className="p-2 text-xs">Signals</TableHead>
+                <TableHead className="p-2 text-xs">Owner</TableHead>
+                <TableHead className="p-2 text-xs">Contact</TableHead>
+                <TableHead className="w-20 p-2 text-xs">Status</TableHead>
+                <TableHead className="w-16 p-2 text-xs">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {leads.map((lead) => (
                  <TableRow 
                   key={lead.business.id}
-                  className={`cursor-pointer hover:bg-muted/50 ${selectedLead?.business.id === lead.business.id ? 'bg-muted' : ''}`}
+                  className={`cursor-pointer hover:bg-muted/50 h-10 ${selectedLead?.business.id === lead.business.id ? 'bg-muted' : ''}`}
                   onClick={() => handleRowClick(lead)}
                 >
                   {onSelectionChange && (
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="p-2" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedLeads.includes(lead.business.id)}
                         onCheckedChange={(checked) => handleLeadSelection(lead.business.id, !!checked)}
                       />
                     </TableCell>
                   )}
-                  <TableCell className="font-medium text-muted-foreground">
+                  <TableCell className="font-medium text-muted-foreground text-xs p-2">
                     #{lead.rank}
                   </TableCell>
-                  <TableCell>
-                    <span className={`font-semibold ${getScoreColor(lead.score)}`}>
+                  <TableCell className="p-2">
+                    <span className={`font-semibold text-sm ${getScoreColor(lead.score)}`}>
                       {lead.score}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="p-2">
                     <div>
-                      <div className="font-medium">{lead.name}</div>
+                      <div className="font-medium text-sm">{lead.name}</div>
                       {lead.website && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Globe className="w-3 h-3" />
-                          <span className="truncate max-w-[200px]">{lead.website}</span>
+                          <Globe className="w-2 h-2" />
+                          <span className="truncate max-w-[150px]">{lead.website}</span>
                         </div>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm">
-                      <MapPin className="w-3 h-3 text-muted-foreground" />
+                  <TableCell className="p-2">
+                    <div className="flex items-center gap-1 text-xs">
+                      <MapPin className="w-2 h-2 text-muted-foreground" />
                       {lead.city}, {lead.state}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="p-2">
                     <div className="flex flex-wrap gap-1">
                       {renderSignalBadges(lead.signals)}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="p-2">
                     {lead.owner && (
-                      <div className="text-sm">
+                      <div className="text-xs">
                         <div>{lead.owner}</div>
                         {lead.owner_email && (
-                          <div className="text-xs text-muted-foreground">{lead.owner_email}</div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[120px]">{lead.owner_email}</div>
                         )}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="p-2">
                     {lead.phone && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Phone className="w-3 h-3 text-muted-foreground" />
-                        {lead.phone}
+                      <div className="flex items-center gap-1 text-xs">
+                        <Phone className="w-2 h-2 text-muted-foreground" />
+                        <span className="truncate">{lead.phone}</span>
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusBadgeVariant(lead.status)}>
+                  <TableCell className="p-2">
+                    <Badge variant={getStatusBadgeVariant(lead.status)} className="text-xs px-1 py-0">
                       {lead.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="p-2">
                     <div className="flex gap-1">
                       <Button 
                         size="sm" 
                         variant="ghost" 
+                        className="h-6 w-6 p-0"
                         onClick={(e) => handleViewDetails(e, lead)}
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3 h-3" />
                       </Button>
                       {lead.website && (
                         <Button 
                           size="sm" 
                           variant="ghost"
+                          className="h-6 w-6 p-0"
                           onClick={(e) => handleOpenWebsite(e, lead.website!)}
                         >
-                          <ExternalLink className="w-4 h-4" />
+                          <ExternalLink className="w-3 h-3" />
                         </Button>
                       )}
                     </div>

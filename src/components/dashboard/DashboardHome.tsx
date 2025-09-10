@@ -148,76 +148,76 @@ export function DashboardHome({ onViewSearch, onStartNewSearch, onRunSearch }: D
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 space-y-3">
       {/* Welcome Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-2">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Your lead generation overview</p>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Your lead generation overview</p>
         </div>
-        <Button onClick={onStartNewSearch} className="shadow-sm hover:shadow-md transition-all duration-200">
-          <Search className="w-4 h-4 mr-2" />
+        <Button onClick={onStartNewSearch} size="sm" className="shadow-sm hover:shadow-md transition-all duration-200">
+          <Search className="w-4 h-4 mr-1" />
           New Search
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Leads</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Users className="h-4 w-4 text-primary" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Total Leads</CardTitle>
+            <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center">
+              <Users className="h-3 w-3 text-primary" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">{stats.totalLeads}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="pt-0">
+            <div className="text-xl font-semibold text-foreground">{stats.totalLeads}</div>
+            <p className="text-xs text-muted-foreground">
               Across {stats.totalSearches} searches
             </p>
           </CardContent>
         </Card>
 
         <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Qualified</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-success" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Qualified</CardTitle>
+            <div className="h-6 w-6 rounded bg-success/10 flex items-center justify-center">
+              <CheckCircle className="h-3 w-3 text-success" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-success">{stats.qualifiedLeads}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="pt-0">
+            <div className="text-xl font-semibold text-success">{stats.qualifiedLeads}</div>
+            <p className="text-xs text-muted-foreground">
               {stats.totalLeads > 0 ? Math.round((stats.qualifiedLeads / stats.totalLeads) * 100) : 0}% of total
             </p>
           </CardContent>
         </Card>
 
         <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">New Leads</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
-              <Clock className="h-4 w-4 text-warning" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">New Leads</CardTitle>
+            <div className="h-6 w-6 rounded bg-warning/10 flex items-center justify-center">
+              <Clock className="h-3 w-3 text-warning" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-warning">{stats.newLeads}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="pt-0">
+            <div className="text-xl font-semibold text-warning">{stats.newLeads}</div>
+            <p className="text-xs text-muted-foreground">
               Awaiting review
             </p>
           </CardContent>
         </Card>
 
         <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ignored</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-muted/20 flex items-center justify-center">
-              <XCircle className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Ignored</CardTitle>
+            <div className="h-6 w-6 rounded bg-muted/20 flex items-center justify-center">
+              <XCircle className="h-3 w-3 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-muted-foreground">{stats.ignoredLeads}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="pt-0">
+            <div className="text-xl font-semibold text-muted-foreground">{stats.ignoredLeads}</div>
+            <p className="text-xs text-muted-foreground">
               Not a good fit
             </p>
           </CardContent>
@@ -225,7 +225,7 @@ export function DashboardHome({ onViewSearch, onStartNewSearch, onRunSearch }: D
       </div>
 
       {/* Analytics Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <SearchAnalytics />
         <LeadQualityTracker />
       </div>
@@ -240,19 +240,19 @@ export function DashboardHome({ onViewSearch, onStartNewSearch, onRunSearch }: D
           <TabsTrigger value="activity">Lead Activity</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="searches" className="space-y-4">
+        <TabsContent value="searches" className="space-y-2">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <TrendingUp className="h-4 w-4" />
                 Search History
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {stats.recentSearches.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {stats.recentSearches.map((search) => (
-                    <div key={search.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:shadow-md transition-shadow">
+                    <div key={search.id} className="flex items-center justify-between p-2 rounded border bg-card hover:shadow-sm transition-shadow">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium">{getSearchDescription(search)}</h4>
