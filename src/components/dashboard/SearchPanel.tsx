@@ -23,17 +23,19 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const debouncedPrompt = useDebounce(prompt, 300);
+  
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (prompt.trim() && !isSubmitting && !isSearching) {
+    if (debouncedPrompt.trim() && !isSubmitting && !isSearching) {
       setIsSubmitting(true);
       try {
-        await onSearch(prompt);
+        await onSearch(debouncedPrompt);
       } finally {
         setIsSubmitting(false);
       }
     }
-  }, [prompt, onSearch, isSubmitting, isSearching]);
+  }, [debouncedPrompt, onSearch, isSubmitting, isSearching]);
 
   const handleExampleClick = useCallback((example: string) => {
     if (!isSearching && !isSubmitting) {
@@ -70,7 +72,7 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
           
           <Button 
             type="submit" 
-            disabled={!prompt.trim() || isSearching || isSubmitting}
+            disabled={!debouncedPrompt.trim() || isSearching || isSubmitting}
             className="w-full"
             variant="default"
           >

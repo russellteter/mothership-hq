@@ -14,6 +14,20 @@ interface LeadsTableProps {
 }
 
 export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: LeadsTableProps) {
+  const handleRowClick = useCallback((lead: Lead) => {
+    onLeadSelect(lead);
+  }, [onLeadSelect]);
+
+  const handleViewDetails = useCallback((e: React.MouseEvent, lead: Lead) => {
+    e.stopPropagation();
+    onLeadSelect(lead);
+  }, [onLeadSelect]);
+
+  const handleOpenWebsite = useCallback((e: React.MouseEvent, website: string) => {
+    e.stopPropagation();
+    window.open(website, '_blank');
+  }, []);
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-success';
     if (score >= 60) return 'text-warning';
@@ -99,7 +113,7 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
                 <TableRow 
                   key={lead.business.id}
                   className={`cursor-pointer hover:bg-muted/50 ${selectedLead?.business.id === lead.business.id ? 'bg-muted' : ''}`}
-                  onClick={useCallback(() => onLeadSelect(lead), [lead, onLeadSelect])}
+                  onClick={() => handleRowClick(lead)}
                 >
                   <TableCell className="font-medium text-muted-foreground">
                     #{lead.rank}
@@ -159,10 +173,7 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        onClick={useCallback((e: React.MouseEvent) => { 
-                          e.stopPropagation(); 
-                          onLeadSelect(lead); 
-                        }, [lead, onLeadSelect])}
+                        onClick={(e) => handleViewDetails(e, lead)}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -170,10 +181,7 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
                         <Button 
                           size="sm" 
                           variant="ghost"
-                          onClick={useCallback((e: React.MouseEvent) => { 
-                            e.stopPropagation(); 
-                            window.open(lead.website, '_blank'); 
-                          }, [lead.website])}
+                          onClick={(e) => handleOpenWebsite(e, lead.website!)}
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Button>

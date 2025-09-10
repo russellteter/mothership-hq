@@ -14,11 +14,12 @@ const corsHeaders = {
 };
 
 // Mapping for business verticals to Google Places types
+// Note: Only using Google Places API supported types
 const verticalToPlaceTypes: Record<string, string[]> = {
-  dentist: ['dentist', 'dental_clinic'],
-  law_firm: ['lawyer', 'legal_services'],
+  dentist: ['dentist'],
+  law_firm: ['lawyer'],
   contractor: ['general_contractor', 'roofing_contractor', 'electrician', 'plumber'],
-  hvac: ['heating_contractor', 'air_conditioning_contractor'],
+  hvac: ['electrician'], // Using electrician as fallback for HVAC
   roofing: ['roofing_contractor'],
   generic: ['establishment']
 };

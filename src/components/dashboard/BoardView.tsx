@@ -12,6 +12,10 @@ interface BoardViewProps {
 }
 
 export function BoardView({ leads, onLeadSelect, onStatusChange }: BoardViewProps) {
+  const handleCardClick = useCallback((lead: Lead) => {
+    onLeadSelect(lead);
+  }, [onLeadSelect]);
+
   const columns = [
     { id: 'new', title: 'New Leads', status: 'new' as const },
     { id: 'qualified', title: 'Qualified', status: 'qualified' as const },
@@ -137,10 +141,10 @@ export function BoardView({ leads, onLeadSelect, onStatusChange }: BoardViewProp
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            onClick={useCallback((e: React.MouseEvent) => {
+                            onClick={(e) => {
                               e.stopPropagation();
-                              onLeadSelect(lead);
-                            }, [lead, onLeadSelect])}
+                              handleCardClick(lead);
+                            }}
                             className="h-6 px-2"
                           >
                             <Eye className="w-3 h-3" />
