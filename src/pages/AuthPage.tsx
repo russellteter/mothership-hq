@@ -15,6 +15,7 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [view, setView] = useState<'signin' | 'signup'>('signin');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -133,33 +134,39 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">SMB Lead Finder</h1>
-          <p className="text-muted-foreground text-lg">
-            Find and qualify potential business leads with AI-powered insights
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-2">SMB Lead Finder</h1>
+          <p className="text-muted-foreground">
+            Professional lead generation with AI-powered insights
           </p>
         </div>
         
-        <Card className="border-border/40 bg-card/60 backdrop-blur-sm shadow-xl">
-          <CardHeader className="text-center pb-3">
-            <CardTitle className="text-xl font-semibold text-card-foreground">Welcome</CardTitle>
+        <Card className="border border-border/50 shadow-lg">
+          <CardHeader className="space-y-3 text-center pb-6">
+            <CardTitle className="text-3xl font-semibold tracking-tight text-foreground">
+              Welcome Back
+            </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Sign in to your account or create a new one
+              Sign in to your Mothership Leads account
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-muted/30">
-                <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Sign Up</TabsTrigger>
+          <CardContent className="space-y-6 pt-0">
+            <Tabs value={view} onValueChange={(value) => setView(value as 'signin' | 'signup')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-8 bg-muted/50">
+                <TabsTrigger value="signin" className="font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
             
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
+              <TabsContent value="signin" className="space-y-4">
+                <form onSubmit={handleSignIn} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email" className="text-sm font-medium text-foreground">Email</Label>
                     <Input
                       id="signin-email"
                       type="email"
@@ -168,10 +175,11 @@ const AuthPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={isLoading}
+                      className="h-11 bg-input border-border focus:border-ring transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password" className="text-sm font-medium text-foreground">Password</Label>
                     <Input
                       id="signin-password"
                       type="password"
@@ -180,19 +188,30 @@ const AuthPage = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={isLoading}
+                      className="h-11 bg-input border-border focus:border-ring transition-colors"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
                   </Button>
                 </form>
               </TabsContent>
               
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
+              <TabsContent value="signup" className="space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Label htmlFor="signup-name" className="text-sm font-medium text-foreground">Full Name</Label>
                     <Input
                       id="signup-name"
                       type="text"
@@ -201,10 +220,11 @@ const AuthPage = () => {
                       onChange={(e) => setFullName(e.target.value)}
                       required
                       disabled={isLoading}
+                      className="h-11 bg-input border-border focus:border-ring transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="text-sm font-medium text-foreground">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -213,10 +233,11 @@ const AuthPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={isLoading}
+                      className="h-11 bg-input border-border focus:border-ring transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="text-sm font-medium text-foreground">Password</Label>
                     <Input
                       id="signup-password"
                       type="password"
@@ -226,18 +247,29 @@ const AuthPage = () => {
                       required
                       minLength={6}
                       disabled={isLoading}
+                      className="h-11 bg-input border-border focus:border-ring transition-colors"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Account
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      'Create Account'
+                    )}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
             
-            <div className="mt-6">
-              <Separator className="my-4 bg-border/50" />
+            <div>
+              <Separator className="my-6 bg-border/50" />
               <p className="text-xs text-muted-foreground text-center leading-relaxed">
                 By continuing, you agree to our Terms of Service and Privacy Policy
               </p>

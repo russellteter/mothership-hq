@@ -162,13 +162,13 @@ const Index = () => {
       
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="border-b border-border p-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="border-b border-border/50 p-6 bg-card/30">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold">SMB Lead Finder</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, {user?.email}</p>
+              <h1 className="text-2xl font-semibold tracking-tight">SMB Lead Finder</h1>
+              <p className="text-sm text-muted-foreground mt-1">Welcome back, {user?.email}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
@@ -191,12 +191,12 @@ const Index = () => {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-medium">
                   {searchResults.length} leads found
                 </Badge>
                 {currentSearchJob && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="font-medium">
                     Status: {currentSearchJob.status}
                   </Badge>
                 )}
