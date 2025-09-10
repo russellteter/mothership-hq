@@ -8,47 +8,70 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Professional B2B color palette */
-    --background: 0 0% 100%;
-    --foreground: 215 25% 12%;
+    /* Dashboard UI Kit - Dark-first design system */
+    /* Base colors - Light mode (fallback) */
+    --background: 246 247 248;
+    --foreground: 17 24 39;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 12%;
+    --card-foreground: 17 24 39;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 12%;
+    --popover-foreground: 17 24 39;
 
-    /* Primary: Professional blue */
+    /* Primary: Professional blue for light mode */
     --primary: 214 95% 28%;
     --primary-foreground: 0 0% 98%;
     --primary-glow: 214 88% 45%;
 
-    /* Secondary: Soft blue-gray */
+    /* Accent colors */
+    --accent-green: 142 82% 43%;     /* #00DB76 equivalent */
+    --accent-green-2: 142 100% 31%;  /* #009C54 equivalent */
+    --accent-blue: 203 96% 48%;      /* #1096DF equivalent */
+
     --secondary: 215 15% 95%;
     --secondary-foreground: 215 25% 12%;
 
     --muted: 215 15% 95%;
-    --muted-foreground: 215 12% 45%;
+    --muted-foreground: 154 163 167; /* #9A9FA7 equivalent */
 
-    --accent: 213 85% 55%;
+    --accent: 203 96% 48%;
     --accent-foreground: 0 0% 98%;
 
-    /* Success for positive signals */
-    --success: 142 76% 36%;
+    /* Status colors */
+    --success: 142 82% 43%;
     --success-foreground: 0 0% 98%;
     --success-light: 142 76% 96%;
 
-    /* Warning for neutral signals */
-    --warning: 45 93% 47%;
+    --warning: 33 100% 71%;  /* #FFB86B equivalent */
     --warning-foreground: 0 0% 98%;
-    --warning-light: 45 93% 95%;
+    --warning-light: 33 100% 95%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 63%;  /* #FF4D4F equivalent */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 215 15% 88%;
+    --border: 16 24 40 / 0.06;  /* rgba(16,24,40,0.06) */
     --input: 215 15% 88%;
     --ring: 214 95% 28%;
+
+    /* Typography */
+    --font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --font-base-size: 14px;
+    --line-height-base: 20px;
+
+    /* Border radius */
+    --radius-pill: 9999px;
+    --radius-control: 8px;
+    --radius-card: 12px;
+    --radius: 0.75rem;
+
+    /* Spacing (8px baseline grid) */
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 24px;
+    --spacing-6: 32px;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
@@ -61,81 +84,84 @@ All colors MUST be HSL.
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-micro: all 120ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-modal: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 
-    --radius: 0.75rem;
-
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 215 25% 5%;
-    --foreground: 0 0% 98%;
+    /* Dashboard UI Kit - Dark mode (primary) */
+    --background: 0 0% 0%;          /* #000000 - pure black */
+    --foreground: 239 239 239;      /* #EFEFEF */
 
-    --card: 215 25% 5%;
-    --card-foreground: 0 0% 98%;
+    --card: 15 15 15;               /* #0f0f0f - panel dark */
+    --card-foreground: 239 239 239; /* #EFEFEF */
 
-    --popover: 215 25% 5%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 15 15 15;
+    --popover-foreground: 239 239 239;
 
-    --primary: 214 88% 65%;
-    --primary-foreground: 215 25% 5%;
-    --primary-glow: 214 88% 75%;
+    /* Primary: Accent green for dark mode */
+    --primary: 142 82% 43%;          /* #00DB76 */
+    --primary-foreground: 0 0% 0%;
+    --primary-glow: 142 100% 31%;    /* #009C54 */
+
+    /* Accent colors for dark mode */
+    --accent-green: 142 82% 43%;     /* #00DB76 */
+    --accent-green-2: 142 100% 31%;  /* #009C54 */
+    --accent-blue: 203 96% 48%;      /* #1096DF */
 
     --secondary: 215 15% 15%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary-foreground: 239 239 239;
 
     --muted: 215 15% 15%;
-    --muted-foreground: 215 12% 65%;
+    --muted-foreground: 154 163 167; /* #9A9FA7 */
 
-    --accent: 213 85% 65%;
-    --accent-foreground: 215 25% 5%;
+    --accent: 142 82% 43%;           /* Green accent in dark mode */
+    --accent-foreground: 0 0% 0%;
 
-    --success: 142 76% 45%;
-    --success-foreground: 0 0% 98%;
+    /* Status colors for dark mode */
+    --success: 142 82% 43%;
+    --success-foreground: 0 0% 0%;
     --success-light: 142 76% 8%;
 
-    --warning: 45 93% 55%;
-    --warning-foreground: 0 0% 98%;
-    --warning-light: 45 93% 8%;
+    --warning: 33 100% 71%;
+    --warning-foreground: 0 0% 0%;
+    --warning-light: 33 100% 8%;
 
-    --destructive: 0 84% 65%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 63%;
+    --destructive-foreground: 239 239 239;
 
-    --border: 215 15% 20%;
+    --border: 255 255 255 / 0.06;    /* rgba(255,255,255,0.06) */
     --input: 215 15% 20%;
-    --ring: 214 88% 65%;
+    --ring: 142 82% 43%;
 
     /* Dark mode gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--accent-green)), hsl(var(--accent-green-2)));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
     
     /* Dark mode shadows */
-    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.25);
-    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.3);
-    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.25);
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--accent-green) / 0.25);
+    --shadow-glow: 0 0 40px hsl(var(--accent-green) / 0.3);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.4);
 
-    --sidebar-background: 215 25% 8%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 214 88% 65%;
-    --sidebar-primary-foreground: 215 25% 5%;
+    /* Dark sidebar */
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 239 239 239;
+    --sidebar-primary: 142 82% 43%;
+    --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 215 15% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 215 15% 20%;
-    --sidebar-ring: 214 88% 65%;
+    --sidebar-accent-foreground: 239 239 239;
+    --sidebar-border: 255 255 255 / 0.06;
+    --sidebar-ring: 142 82% 43%;
   }
 }
 
@@ -145,6 +171,20 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-[var(--font-family)] text-[var(--font-base-size)] leading-[var(--line-height-base)];
+  }
+
+  /* Micro-interaction utilities */
+  .hover-scale {
+    @apply transition-transform duration-[var(--transition-micro)] hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .hover-fade {
+    @apply transition-opacity duration-[var(--transition-micro)] hover:opacity-80;
+  }
+
+  /* Focus states for accessibility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }
