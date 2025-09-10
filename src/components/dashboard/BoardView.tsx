@@ -64,18 +64,18 @@ export function BoardView({ leads, onLeadSelect, onStatusChange }: BoardViewProp
   };
 
   return (
-    <div className="h-full p-6">
+    <div className="p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold">Lead Board</h2>
         <p className="text-muted-foreground">Drag leads between columns to update their status</p>
       </div>
       
-      <div className="grid grid-cols-3 gap-6 h-full">
+      <div className="grid grid-cols-3 gap-6 min-h-[600px]">
         {columns.map((column) => {
           const columnLeads = getLeadsByStatus(column.status);
           
           return (
-            <div key={column.id} className="flex flex-col h-full">
+            <div key={column.id} className="flex flex-col min-h-[500px]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-lg">{column.title}</h3>
                 <Badge variant="secondary">{columnLeads.length}</Badge>
