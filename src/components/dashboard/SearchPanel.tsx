@@ -122,8 +122,60 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
-            <div className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
-              Advanced filtering options coming soon. The AI will automatically extract location, industry, and constraints from your prompt.
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Industry</label>
+                <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
+                  <option value="">Auto-detect from prompt</option>
+                  <option value="dentist">Dentist</option>
+                  <option value="law_firm">Law Firm</option>
+                  <option value="contractor">Contractor</option>
+                  <option value="hvac">HVAC</option>
+                  <option value="roofing">Roofing</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Search Radius</label>
+                <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
+                  <option value="20">20 km</option>
+                  <option value="40" selected>40 km</option>
+                  <option value="80">80 km</option>
+                  <option value="100">100 km</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Result Limit</label>
+                <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
+                  <option value="50">50 leads</option>
+                  <option value="100">100 leads</option>
+                  <option value="250" selected>250 leads</option>
+                  <option value="500">500 leads</option>
+                </select>
+              </div>
+              
+              <div className="pt-2 border-t border-border">
+                <label className="text-xs font-medium text-muted-foreground">Constraints</label>
+                <div className="mt-2 space-y-2">
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" className="rounded border-border" />
+                    <span>Must have website</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" className="rounded border-border" />
+                    <span>Owner identified</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" className="rounded border-border" />
+                    <span>Has online booking</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" className="rounded border-border" />
+                    <span>Exclude franchises</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </CollapsibleContent>
         </Collapsible>

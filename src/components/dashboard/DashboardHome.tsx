@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { SearchAnalytics } from './SearchAnalytics';
 import { LeadQualityTracker } from './LeadQualityTracker';
 import { SavedSearchesTable } from './SavedSearchesTable';
+import { SearchHistoryManager } from './SearchHistoryManager';
 
 interface DashboardStats {
   totalLeads: number;
@@ -35,9 +36,10 @@ interface DashboardStats {
 interface DashboardHomeProps {
   onViewSearch: (searchJob: SearchJob) => void;
   onStartNewSearch: () => void;
+  onRunSearch: (dsl: any) => void;
 }
 
-export function DashboardHome({ onViewSearch, onStartNewSearch }: DashboardHomeProps) {
+export function DashboardHome({ onViewSearch, onStartNewSearch, onRunSearch }: DashboardHomeProps) {
   const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
     qualifiedLeads: 0,
@@ -301,7 +303,7 @@ export function DashboardHome({ onViewSearch, onStartNewSearch }: DashboardHomeP
         </TabsContent>
 
         <TabsContent value="saved" className="space-y-4">
-          <SavedSearchesTable onRunSearch={(search) => onViewSearch(search as any)} />
+          <SavedSearchesTable onRunSearch={onRunSearch} />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">

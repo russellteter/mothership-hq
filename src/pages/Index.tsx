@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings } from 'lucide-react';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
-import { LeadDetailDrawer } from '@/components/dashboard/LeadDetailDrawer';
+import { ResizableLeadDetailDrawer } from '@/components/dashboard/ResizableLeadDetailDrawer';
 import { BoardView } from '@/components/dashboard/BoardView';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
-import { SavedSearches } from '@/components/dashboard/SavedSearches';
+import { SavedSearchesTable } from '@/components/dashboard/SavedSearchesTable';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { BulkOperations } from '@/components/dashboard/BulkOperations';
 import { LeadScoringProfiles } from '@/components/dashboard/LeadScoringProfiles';
@@ -319,8 +319,9 @@ const Index = () => {
               <DashboardHome 
                 onViewSearch={handleViewSearch}
                 onStartNewSearch={handleStartNewSearch}
+                onRunSearch={handleRunSavedSearch}
               />
-              <SavedSearches onRunSearch={handleRunSavedSearch} />
+              <SavedSearchesTable onRunSearch={handleRunSavedSearch} />
               {showScoringSettings && (
                 <LeadScoringProfiles
                   currentProfile={currentScoringProfile}
@@ -367,7 +368,7 @@ const Index = () => {
         </div>
       </div>
 
-      <LeadDetailDrawer
+      <ResizableLeadDetailDrawer
         lead={selectedLead}
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
