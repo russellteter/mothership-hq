@@ -73,12 +73,12 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
   }
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <Card className="h-full">
-        <div className="p-6 border-b border-border">
+    <div className="flex-1 flex flex-col">
+      <Card className="h-full flex flex-col">
+        <div className="p-6 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold">Search Results ({leads.length} leads)</h2>
         </div>
-        <div className="overflow-auto h-full">
+        <div className="flex-1 overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
