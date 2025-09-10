@@ -212,8 +212,9 @@ async function getPlaceDetails(placeId: string): Promise<any> {
   return data;
 }
 
-async function analyzeWebsite(url: string): Promise<Signal[]> {
+async function analyzeWebsite(url: string): Promise<{ signals: Signal[], people: any[] }> {
   const signals: Signal[] = [];
+  const people: any[] = [];
   
   try {
     console.log('Analyzing website:', url);
@@ -234,7 +235,7 @@ async function analyzeWebsite(url: string): Promise<Signal[]> {
         evidence_snippet: `Website returned ${response.status} error`,
         source_key: 'http_fetch'
       });
-      return signals;
+      return { signals, people };
     }
     
     const html = await response.text();
@@ -268,7 +269,7 @@ async function analyzeWebsite(url: string): Promise<Signal[]> {
       source_key: 'http_fetch'
     });
     
-    // Check for owner identification (simple pattern matching)
+    // Enhanced owner identification and contact extraction
     const ownerMatch = ownerPatterns.some(pattern => lowerHtml.includes(pattern));
     if (ownerMatch) {
       signals.push({
@@ -281,6 +282,10 @@ async function analyzeWebsite(url: string): Promise<Signal[]> {
         source_key: 'http_fetch'
       });
     }
+    
+    // Extract owner contact information
+    const extractedContacts = extractOwnerContacts(html, url);
+    people.push(...extractedContacts);
     
   } catch (error) {
     console.error('Website analysis error:', error);
@@ -295,7 +300,90 @@ async function analyzeWebsite(url: string): Promise<Signal[]> {
     });
   }
   
-  return signals;
+  return { signals, people };
+}
+
+function extractOwnerContacts(html: string, baseUrl: string): any[] {
+  const contacts: any[] = [];
+  const lowerHtml = html.toLowerCase();
+  
+  try {
+    // Email patterns
+    const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    const emails = html.match(emailRegex) || [];
+    
+    // Phone patterns
+    const phoneRegex = /(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
+    const phones = html.match(phoneRegex) || [];
+    
+    // LinkedIn URL patterns
+    const linkedinRegex = /(https?:\/\/(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+)/g;
+    const linkedinUrls = html.match(linkedinRegex) || [];
+    
+    // Name extraction patterns around owner keywords
+    const ownerSections = [
+      /about\s+us[\s\S]{0,500}/gi,
+      /meet\s+(?:the\s+)?(?:team|doctor|owner)[\s\S]{0,500}/gi,
+      /our\s+team[\s\S]{0,500}/gi,
+      /leadership[\s\S]{0,500}/gi,
+      /(?:dr\.?\s+|doctor\s+)([a-z\s]{2,30})/gi,
+      /(?:owner|principal|founder)[:\s]+([a-z\s]{2,30})/gi
+    ];
+    
+    const extractedNames: string[] = [];
+    ownerSections.forEach(pattern => {
+      const matches = html.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          // Extract names from common patterns
+          const namePatterns = [
+            /(?:dr\.?\s+|doctor\s+)([a-z\s]{2,30})/gi,
+            /(?:owner|principal|founder)[:\s]+([a-z\s]{2,30})/gi,
+            /<h[1-6][^>]*>([^<]*(?:dr\.?|owner|principal)[^<]*)<\/h[1-6]>/gi
+          ];
+          
+          namePatterns.forEach(namePattern => {
+            const nameMatches = match.match(namePattern);
+            if (nameMatches) {
+              nameMatches.forEach(nameMatch => {
+                const cleanName = nameMatch.replace(/(?:dr\.?|owner|principal|founder)[:\s]*/gi, '').trim();
+                if (cleanName.length > 2 && cleanName.length < 50 && /^[a-zA-Z\s.]+$/.test(cleanName)) {
+                  extractedNames.push(cleanName);
+                }
+              });
+            }
+          });
+        });
+      }
+    });
+    
+    // Combine extracted information
+    if (extractedNames.length > 0 || emails.length > 0 || phones.length > 0 || linkedinUrls.length > 0) {
+      const ownerName = extractedNames[0] || 'Owner';
+      const ownerEmail = emails.find(email => 
+        !email.includes('info@') && 
+        !email.includes('contact@') && 
+        !email.includes('admin@') &&
+        !email.includes('support@')
+      ) || emails[0];
+      const ownerPhone = phones[0];
+      const linkedinUrl = linkedinUrls[0];
+      
+      contacts.push({
+        name: ownerName,
+        role: extractedNames[0] && extractedNames[0].toLowerCase().includes('dr') ? 'Doctor/Owner' : 'Owner',
+        email: ownerEmail,
+        phone: ownerPhone,
+        source_url: linkedinUrl || baseUrl,
+        confidence: 0.7
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error extracting owner contacts:', error);
+  }
+  
+  return contacts;
 }
 
 function calculateScore(signals: Signal[], constraints: any): { score: number; subscores: any } {
@@ -459,8 +547,35 @@ serve(async (req) => {
         const signals: Signal[] = [];
         
         if (business.website) {
-          const websiteSignals = await analyzeWebsite(business.website);
+          const { signals: websiteSignals, people: extractedPeople } = await analyzeWebsite(business.website);
           signals.push(...websiteSignals.map(s => ({ ...s, business_id: insertedBusiness.id })));
+          
+          // Insert extracted people into database
+          for (const person of extractedPeople) {
+            try {
+              const { data: insertedPerson, error: personError } = await supabase
+                .from('people')
+                .insert({
+                  business_id: insertedBusiness.id,
+                  name: person.name,
+                  role: person.role,
+                  email: person.email,
+                  phone: person.phone,
+                  source_url: person.source_url,
+                  confidence: person.confidence
+                })
+                .select()
+                .single();
+              
+              if (personError) {
+                console.error('Failed to insert person:', personError);
+              } else {
+                console.log('Inserted person:', insertedPerson.name);
+              }
+            } catch (personInsertError) {
+              console.error('Error inserting person:', personInsertError);
+            }
+          }
           
           // Add website presence signal (since we have a website)
           signals.push({

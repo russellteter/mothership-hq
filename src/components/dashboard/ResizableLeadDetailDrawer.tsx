@@ -132,7 +132,7 @@ export function ResizableLeadDetailDrawer({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing) return;
     
-    const deltaX = startX.current - e.clientX;
+    const deltaX = e.clientX - startX.current;
     const newWidth = Math.max(400, Math.min(window.innerWidth - 100, startWidth.current + deltaX));
     setWidth(newWidth);
   }, [isResizing]);
@@ -243,12 +243,10 @@ export function ResizableLeadDetailDrawer({
         {/* Resize Handle */}
         <div 
           ref={resizeRef}
-          className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize bg-border hover:bg-primary/50 transition-colors z-10"
+          className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize bg-primary/20 hover:bg-primary/40 transition-colors z-50 flex items-center justify-center"
           onMouseDown={handleMouseDown}
         >
-          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <GripVertical className="w-3 h-3 text-muted-foreground" />
-          </div>
+          <GripVertical className="w-4 h-4 text-primary" />
         </div>
 
         <div className="p-6">
@@ -508,44 +506,139 @@ export function ResizableLeadDetailDrawer({
                 </Card>
               </TabsContent>
 
-              {/* Keep other tabs unchanged for now */}
               <TabsContent value="contacts" className="space-y-4">
-                {lead.people.length > 0 ? (
-                  lead.people.map((person) => (
-                    <Card key={person.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                            <User className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">{person.name}</div>
-                            <div className="text-sm text-muted-foreground">{person.role}</div>
-                            {person.email && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Mail className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs">{person.email}</span>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Contact Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {lead.people && lead.people.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Owner Information - Prominent Display */}
+                        {lead.people.filter(p => p.role.toLowerCase().includes('owner') || p.role.toLowerCase().includes('principal')).map((owner) => (
+                          <div key={owner.id} className="p-4 border rounded-lg bg-primary/5">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <User className="w-5 h-5 text-primary" />
+                                <div>
+                                  <h3 className="font-semibold text-lg">{owner.name}</h3>
+                                  <Badge variant="default" className="text-xs">{owner.role}</Badge>
+                                </div>
                               </div>
-                            )}
-                            {person.phone && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Phone className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs">{person.phone}</span>
+                              <div className="text-right text-xs text-muted-foreground">
+                                Confidence: {Math.round((owner.confidence || 0) * 100)}%
                               </div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Confidence: {Math.round(person.confidence * 100)}%
+                            </div>
+                            <div className="grid grid-cols-1 gap-3">
+                              {owner.email && (
+                                <div className="flex items-center gap-3">
+                                  <Mail className="w-4 h-4 text-muted-foreground" />
+                                  <Button 
+                                    variant="link" 
+                                    className="p-0 h-auto text-sm font-medium text-primary"
+                                    onClick={() => window.open(`mailto:${owner.email}`, '_blank')}
+                                  >
+                                    {owner.email}
+                                  </Button>
+                                </div>
+                              )}
+                              {owner.phone && (
+                                <div className="flex items-center gap-3">
+                                  <Phone className="w-4 h-4 text-muted-foreground" />
+                                  <Button 
+                                    variant="link" 
+                                    className="p-0 h-auto text-sm font-medium"
+                                    onClick={() => window.open(`tel:${owner.phone}`, '_blank')}
+                                  >
+                                    {owner.phone}
+                                  </Button>
+                                </div>
+                              )}
+                              {owner.source_url && owner.source_url.includes('linkedin.com') && (
+                                <div className="flex items-center gap-3">
+                                  <ExternalLink className="w-4 h-4 text-blue-600" />
+                                  <Button 
+                                    variant="link" 
+                                    className="p-0 h-auto text-sm font-medium text-blue-600"
+                                    onClick={() => window.open(owner.source_url, '_blank')}
+                                  >
+                                    LinkedIn Profile
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No contact information available
-                  </div>
-                )}
+                        ))}
+                        
+                        {/* Other Team Members */}
+                        {lead.people.filter(p => !p.role.toLowerCase().includes('owner') && !p.role.toLowerCase().includes('principal')).length > 0 && (
+                          <div>
+                            <h4 className="font-medium text-sm mb-2">Other Team Members</h4>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Name</TableHead>
+                                  <TableHead>Role</TableHead>
+                                  <TableHead>Contact</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {lead.people.filter(p => !p.role.toLowerCase().includes('owner') && !p.role.toLowerCase().includes('principal')).map((person) => (
+                                  <TableRow key={person.id}>
+                                    <TableCell className="font-medium">{person.name}</TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline">{person.role}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="space-y-1">
+                                        {person.email && (
+                                          <div className="flex items-center gap-2">
+                                            <Mail className="w-3 h-3 text-muted-foreground" />
+                                            <Button 
+                                              variant="link" 
+                                              className="p-0 h-auto text-xs"
+                                              onClick={() => window.open(`mailto:${person.email}`, '_blank')}
+                                            >
+                                              {person.email}
+                                            </Button>
+                                          </div>
+                                        )}
+                                        {person.phone && (
+                                          <div className="flex items-center gap-2">
+                                            <Phone className="w-3 h-3 text-muted-foreground" />
+                                            <span className="text-xs">{person.phone}</span>
+                                          </div>
+                                        )}
+                                        {person.source_url && person.source_url.includes('linkedin.com') && (
+                                          <div className="flex items-center gap-2">
+                                            <ExternalLink className="w-3 h-3 text-blue-600" />
+                                            <Button 
+                                              variant="link" 
+                                              className="p-0 h-auto text-xs text-blue-600"
+                                              onClick={() => window.open(person.source_url, '_blank')}
+                                            >
+                                              LinkedIn
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No contact information available</p>
+                        <p className="text-xs mt-1">Owner identification signals detected but contact details not extracted</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="insights" className="space-y-4">
