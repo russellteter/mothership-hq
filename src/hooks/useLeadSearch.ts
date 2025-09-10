@@ -31,7 +31,16 @@ export function useLeadSearch() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error('No active session. Please sign in.');
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to search for leads. You'll be redirected to the login page.",
+          variant: "destructive"
+        });
+        // Redirect to auth page after a short delay
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 2000);
+        return;
       }
       
       // Start the search job with auth token
@@ -57,11 +66,26 @@ export function useLeadSearch() {
       
     } catch (error) {
       console.error('Search error:', error);
-      toast({
-        title: "Search Failed",
-        description: error instanceof Error ? error.message : "An error occurred during search",
-        variant: "destructive"
-      });
+      const errorMessage = error instanceof Error ? error.message : "An error occurred during search";
+      
+      // Check if it's an authentication error
+      if (errorMessage.includes('session') || errorMessage.includes('auth') || errorMessage.includes('unauthorized')) {
+        toast({
+          title: "Authentication Error",
+          description: "Your session has expired. Please sign in again.",
+          variant: "destructive"
+        });
+        // Redirect to auth page after a short delay
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 2000);
+      } else {
+        toast({
+          title: "Search Failed",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSearching(false);
     }
@@ -81,7 +105,7 @@ export function useLeadSearch() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          throw new Error('No active session');
+          throw new Error('Authentication session expired. Please sign in again.');
         }
         
         // Use the Supabase client instead of direct fetch
