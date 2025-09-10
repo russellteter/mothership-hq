@@ -37,6 +37,7 @@ interface LeadDetailDrawerProps {
   onStatusChange: (status: 'new' | 'qualified' | 'ignored') => void;
   onAddNote: (note: string) => void;
   onAddTag: (tag: string) => void;
+  onSignalOverride?: (signalId: string, isCorrect: boolean) => void;
 }
 
 export function LeadDetailDrawer({ 
@@ -45,7 +46,8 @@ export function LeadDetailDrawer({
   onClose, 
   onStatusChange, 
   onAddNote, 
-  onAddTag 
+  onAddTag,
+  onSignalOverride 
 }: LeadDetailDrawerProps) {
   const [newNote, setNewNote] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -183,11 +185,12 @@ export function LeadDetailDrawer({
           </Card>
 
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="signals">Signals</TabsTrigger>
               <TabsTrigger value="contacts">Contacts</TabsTrigger>
               <TabsTrigger value="insights">AI Insights</TabsTrigger>
+              <TabsTrigger value="evidence">Evidence</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
 
@@ -503,6 +506,31 @@ export function LeadDetailDrawer({
                     )}
                   </CardContent>
                 </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="evidence" className="space-y-4">
+              {onSignalOverride ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Evidence Hub
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Evidence hub integration coming soon</p>
+                      <p className="text-xs mt-2">Signal override functionality detected</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Evidence hub requires signal override functionality</p>
+                </div>
               )}
             </TabsContent>
 

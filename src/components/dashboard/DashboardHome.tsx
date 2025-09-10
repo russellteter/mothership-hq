@@ -12,11 +12,15 @@ import {
   TrendingUp,
   Calendar,
   ArrowRight,
-  Eye
+  Eye,
+  BarChart3,
+  Target
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { SearchJob } from '@/types/lead';
 import { useAuth } from '@/hooks/useAuth';
+import { SearchAnalytics } from './SearchAnalytics';
+import { LeadQualityTracker } from './LeadQualityTracker';
 
 interface DashboardStats {
   totalLeads: number;
@@ -217,10 +221,18 @@ export function DashboardHome({ onViewSearch, onStartNewSearch }: DashboardHomeP
         </Card>
       </div>
 
+      {/* Analytics Dashboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SearchAnalytics />
+        <LeadQualityTracker />
+      </div>
+
       {/* Recent Activity */}
       <Tabs defaultValue="searches" className="w-full">
         <TabsList>
           <TabsTrigger value="searches">Recent Searches</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="quality">Quality Metrics</TabsTrigger>
           <TabsTrigger value="activity">Lead Activity</TabsTrigger>
         </TabsList>
 
@@ -284,6 +296,14 @@ export function DashboardHome({ onViewSearch, onStartNewSearch }: DashboardHomeP
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <SearchAnalytics />
+        </TabsContent>
+
+        <TabsContent value="quality" className="space-y-4">
+          <LeadQualityTracker />
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-4">

@@ -132,6 +132,13 @@ const Index = () => {
     await addTag(selectedLead.business.id, tag);
   };
 
+  const handleSignalOverride = async (signalId: string, isCorrect: boolean) => {
+    // TODO: Implement signal override functionality
+    console.log('Signal override:', signalId, isCorrect);
+    // This would update the signal in the database
+    // For now, just a placeholder
+  };
+
   const handleRunSavedSearch = async (dsl: LeadQuery) => {
     await searchLeads(dsl);
     setActiveView('table');
@@ -367,6 +374,7 @@ const Index = () => {
         onStatusChange={(status) => selectedLead && handleStatusChange(selectedLead.business.id, status)}
         onAddNote={handleAddNote}
         onAddTag={handleAddTag}
+        onSignalOverride={handleSignalOverride}
       />
     </div>
   );
