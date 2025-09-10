@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Search, Sparkles } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
+import { SearchSuggestions } from './SearchSuggestions';
 
 interface SearchPanelProps {
   onSearch: (prompt: string) => void;
@@ -22,6 +23,7 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const debouncedPrompt = useDebounce(prompt, 300);
   
@@ -40,8 +42,14 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
   const handleExampleClick = useCallback((example: string) => {
     if (!isSearching && !isSubmitting) {
       setPrompt(example);
+      setShowSuggestions(true);
     }
   }, [isSearching, isSubmitting]);
+
+  const handleSuggestionSelect = useCallback((suggestedPrompt: string) => {
+    setPrompt(suggestedPrompt);
+    setShowSuggestions(false);
+  }, []);
 
   return (
     <div className="w-80 h-full bg-card border-r border-border flex flex-col">
@@ -99,6 +107,12 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
             ))}
           </div>
         </div>
+
+        <SearchSuggestions
+          currentPrompt={prompt}
+          onSuggestionSelect={handleSuggestionSelect}
+          isVisible={showSuggestions && prompt.length > 10}
+        />
 
         <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
           <CollapsibleTrigger asChild>

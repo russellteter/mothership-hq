@@ -131,11 +131,19 @@ export function LeadsTable({
             </TableHeader>
             <TableBody>
               {leads.map((lead) => (
-                <TableRow 
+                 <TableRow 
                   key={lead.business.id}
                   className={`cursor-pointer hover:bg-muted/50 ${selectedLead?.business.id === lead.business.id ? 'bg-muted' : ''}`}
                   onClick={() => handleRowClick(lead)}
                 >
+                  {onSelectionChange && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedLeads.includes(lead.business.id)}
+                        onCheckedChange={(checked) => handleLeadSelection(lead.business.id, !!checked)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium text-muted-foreground">
                     #{lead.rank}
                   </TableCell>
