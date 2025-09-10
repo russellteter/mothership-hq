@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ExternalLink, Eye, Star, Phone, Globe, MapPin } from 'lucide-react';
 import { Lead } from '@/types/lead';
@@ -11,9 +12,18 @@ interface LeadsTableProps {
   selectedLead: Lead | null;
   onLeadSelect: (lead: Lead) => void;
   isLoading: boolean;
+  selectedLeads?: string[];
+  onSelectionChange?: (leadIds: string[]) => void;
 }
 
-export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: LeadsTableProps) {
+export function LeadsTable({ 
+  leads, 
+  selectedLead, 
+  onLeadSelect, 
+  isLoading, 
+  selectedLeads = [], 
+  onSelectionChange 
+}: LeadsTableProps) {
   const handleRowClick = useCallback((lead: Lead) => {
     onLeadSelect(lead);
   }, [onLeadSelect]);
@@ -27,6 +37,16 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
     e.stopPropagation();
     window.open(website, '_blank');
   }, []);
+
+  const handleLeadSelection = useCallback((leadId: string, checked: boolean) => {
+    if (!onSelectionChange) return;
+    
+    if (checked) {
+      onSelectionChange([...selectedLeads, leadId]);
+    } else {
+      onSelectionChange(selectedLeads.filter(id => id !== leadId));
+    }
+  }, [selectedLeads, onSelectionChange]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-success';
@@ -97,6 +117,7 @@ export function LeadsTable({ leads, selectedLead, onLeadSelect, isLoading }: Lea
           <Table>
             <TableHeader>
               <TableRow>
+                {onSelectionChange && <TableHead className="w-12"></TableHead>}
                 <TableHead className="w-12">Rank</TableHead>
                 <TableHead className="w-16">Score</TableHead>
                 <TableHead>Business</TableHead>

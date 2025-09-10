@@ -3,13 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search } from 'lucide-react';
+import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings } from 'lucide-react';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
 import { LeadDetailDrawer } from '@/components/dashboard/LeadDetailDrawer';
 import { BoardView } from '@/components/dashboard/BoardView';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
-import { Lead } from '@/types/lead';
+import { SavedSearches } from '@/components/dashboard/SavedSearches';
+import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
+import { BulkOperations } from '@/components/dashboard/BulkOperations';
+import { LeadScoringProfiles } from '@/components/dashboard/LeadScoringProfiles';
+import { Lead, LeadQuery } from '@/types/lead';
 import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -19,6 +23,11 @@ const Index = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeView, setActiveView] = useState<'dashboard' | 'table' | 'board'>('dashboard');
   const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [currentScoringProfile, setCurrentScoringProfile] = useState('generic');
+  const [showScoringSettings, setShowScoringSettings] = useState(false);
   
   const { user, loading, signOut, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -39,6 +48,12 @@ const Index = () => {
       navigate('/auth');
     }
   }, [loading, isAuthenticated, navigate]);
+
+  // Initialize filtered leads when search results change
+  useEffect(() => {
+    setFilteredLeads(searchResults);
+    setSelectedLeadIds([]);
+  }, [searchResults]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -117,8 +132,57 @@ const Index = () => {
     await addTag(selectedLead.business.id, tag);
   };
 
+  const handleRunSavedSearch = async (dsl: LeadQuery) => {
+    await searchLeads(dsl);
+    setActiveView('table');
+  };
+
+  const handleBulkStatusChange = async (leadIds: string[], status: 'new' | 'qualified' | 'ignored') => {
+    await Promise.all(leadIds.map(id => updateLeadStatus(id, status)));
+    // Update selected lead if it's in the batch
+    if (selectedLead && leadIds.includes(selectedLead.business.id)) {
+      setSelectedLead({ ...selectedLead, status });
+    }
+    // Clear selection after bulk operation
+    setSelectedLeadIds([]);
+  };
+
+  const handleBulkTag = async (leadIds: string[], tag: string) => {
+    await Promise.all(leadIds.map(id => addTag(id, tag)));
+    setSelectedLeadIds([]);
+  };
+
+  const handleBulkExport = (leadIds: string[]) => {
+    const leadsToExport = filteredLeads.filter(lead => leadIds.includes(lead.business.id));
+    
+    const csvContent = [
+      ['Rank', 'Name', 'City', 'State', 'Phone', 'Website', 'Owner', 'Score', 'Status'].join(','),
+      ...leadsToExport.map(lead => [
+        lead.rank,
+        `"${lead.name}"`,
+        lead.city,
+        lead.state,
+        lead.phone || '',
+        lead.website || '',
+        `"${lead.owner || ''}"`,
+        lead.score,
+        lead.status
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected-leads-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const exportToCsv = () => {
-    if (searchResults.length === 0) {
+    const leadsToExport = filteredLeads.length > 0 ? filteredLeads : searchResults;
+    
+    if (leadsToExport.length === 0) {
       toast({
         title: "No Data to Export",
         description: "Please run a search first",
@@ -129,7 +193,7 @@ const Index = () => {
 
     const csvContent = [
       ['Rank', 'Name', 'City', 'State', 'Phone', 'Website', 'Owner', 'Score', 'Status'].join(','),
-      ...searchResults.map(lead => [
+      ...leadsToExport.map(lead => [
         lead.rank,
         `"${lead.name}"`,
         lead.city,
@@ -152,7 +216,7 @@ const Index = () => {
     
     toast({
       title: "Export Successful",
-      description: `Exported ${searchResults.length} leads to CSV`
+      description: `Exported ${leadsToExport.length} leads to CSV`
     });
   };
 
@@ -193,8 +257,13 @@ const Index = () => {
               </Tabs>
               <div className="flex items-center gap-3">
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-medium">
-                  {searchResults.length} leads found
+                  {filteredLeads.length} of {searchResults.length} leads
                 </Badge>
+                {selectedLeadIds.length > 0 && (
+                  <Badge variant="secondary" className="font-medium">
+                    {selectedLeadIds.length} selected
+                  </Badge>
+                )}
                 {currentSearchJob && (
                   <Badge variant="secondary" className="font-medium">
                     Status: {currentSearchJob.status}
@@ -205,14 +274,24 @@ const Index = () => {
             
             <div className="flex items-center gap-2">
               {activeView !== 'dashboard' && (
-                <Button 
-                  onClick={() => setShowSearchPanel(!showSearchPanel)} 
-                  variant="outline" 
-                  className="flex items-center gap-2"
-                >
-                  <Search className="w-4 h-4" />
-                  {showSearchPanel ? 'Hide Search' : 'Search'}
-                </Button>
+                <>
+                  <Button 
+                    onClick={() => setShowSearchPanel(!showSearchPanel)} 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                  >
+                    <Search className="w-4 h-4" />
+                    {showSearchPanel ? 'Hide Search' : 'Search'}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowScoringSettings(!showScoringSettings)} 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Scoring
+                  </Button>
+                </>
               )}
               <Button 
                 onClick={exportToCsv} 
@@ -229,23 +308,54 @@ const Index = () => {
 
         <div className="flex-1 overflow-auto">
           {activeView === 'dashboard' ? (
-            <DashboardHome 
-              onViewSearch={handleViewSearch}
-              onStartNewSearch={handleStartNewSearch}
-            />
-          ) : activeView === 'table' ? (
-            <LeadsTable
-              leads={searchResults}
-              selectedLead={selectedLead}
-              onLeadSelect={handleLeadSelect}
-              isLoading={isSearching}
-            />
+            <div className="p-6 space-y-6">
+              <DashboardHome 
+                onViewSearch={handleViewSearch}
+                onStartNewSearch={handleStartNewSearch}
+              />
+              <SavedSearches onRunSearch={handleRunSavedSearch} />
+              {showScoringSettings && (
+                <LeadScoringProfiles
+                  currentProfile={currentScoringProfile}
+                  onProfileChange={setCurrentScoringProfile}
+                  onWeightsChange={(weights) => {
+                    // This would trigger re-scoring in a real implementation
+                    console.log('Scoring weights updated:', weights);
+                  }}
+                />
+              )}
+            </div>
           ) : (
-            <BoardView
-              leads={searchResults}
-              onLeadSelect={handleLeadSelect}
-              onStatusChange={handleStatusChange}
-            />
+            <div className="p-4">
+              <AdvancedFilters
+                leads={searchResults}
+                onFilterChange={setFilteredLeads}
+                isVisible={showAdvancedFilters}
+                onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              />
+              <BulkOperations
+                leads={filteredLeads}
+                selectedLeads={selectedLeadIds}
+                onSelectionChange={setSelectedLeadIds}
+                onStatusChange={handleBulkStatusChange}
+                onBulkTag={handleBulkTag}
+                onBulkExport={handleBulkExport}
+              />
+              {activeView === 'table' ? (
+                <LeadsTable
+                  leads={filteredLeads}
+                  selectedLead={selectedLead}
+                  onLeadSelect={handleLeadSelect}
+                  isLoading={isSearching}
+                />
+              ) : (
+                <BoardView
+                  leads={filteredLeads}
+                  onLeadSelect={handleLeadSelect}
+                  onStatusChange={handleStatusChange}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>
