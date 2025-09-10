@@ -299,9 +299,48 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_searches: {
+        Row: {
+          created_at: string
+          dsl_json: Json
+          id: string
+          name: string
+          search_job_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dsl_json: Json
+          id?: string
+          name: string
+          search_job_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dsl_json?: Json
+          id?: string
+          name?: string
+          search_job_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_searches_search_job_id_fkey"
+            columns: ["search_job_id"]
+            isOneToOne: false
+            referencedRelation: "search_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_jobs: {
         Row: {
           created_at: string
+          deleted_at: string | null
           dsl_json: Json
           error_text: string | null
           id: string
@@ -311,6 +350,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           dsl_json: Json
           error_text?: string | null
           id?: string
@@ -320,12 +360,43 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           dsl_json?: Json
           error_text?: string | null
           id?: string
           status?: string
           summary_stats?: Json | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      signal_overrides: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          is_correct: boolean
+          reasoning: string | null
+          signal_id: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          is_correct: boolean
+          reasoning?: string | null
+          signal_id: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          reasoning?: string | null
+          signal_id?: string
+          user_id?: string
         }
         Relationships: []
       }

@@ -301,7 +301,7 @@ export function DashboardHome({ onViewSearch, onStartNewSearch }: DashboardHomeP
         </TabsContent>
 
         <TabsContent value="saved" className="space-y-4">
-          <SavedSearchesTable onRunSearch={onStartNewSearch} />
+          <SavedSearchesTable onRunSearch={(search) => onViewSearch(search as any)} />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">

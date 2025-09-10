@@ -455,12 +455,23 @@ serve(async (req) => {
         
         console.log('Inserted business:', insertedBusiness.name);
         
-        // Analyze website if available
+        // Analyze website and determine signals
         const signals: Signal[] = [];
         
         if (business.website) {
           const websiteSignals = await analyzeWebsite(business.website);
           signals.push(...websiteSignals.map(s => ({ ...s, business_id: insertedBusiness.id })));
+          
+          // Add website presence signal (since we have a website)
+          signals.push({
+            business_id: insertedBusiness.id,
+            type: 'no_website',
+            value_json: false,
+            confidence: 0.95,
+            evidence_url: business.website,
+            evidence_snippet: 'Website URL found and accessible',
+            source_key: 'google_places'
+          });
         } else {
           signals.push({
             business_id: insertedBusiness.id,
