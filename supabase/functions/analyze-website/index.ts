@@ -14,136 +14,276 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { website, businessName, businessLocation } = await req.json();
-
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    // Get user from auth header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Fetch website content
-    let websiteContent = '';
-    try {
-      const websiteResponse = await fetch(website, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; BusinessAnalyzer/1.0)'
-        }
-      });
-      
-      if (websiteResponse.ok) {
-        const html = await websiteResponse.text();
-        // Extract text content (basic HTML stripping)
-        websiteContent = html
-          .replace(/<script[^>]*>.*?<\/script>/gi, '')
-          .replace(/<style[^>]*>.*?<\/style>/gi, '')
-          .replace(/<[^>]*>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .substring(0, 3000); // Limit content length
-      }
-    } catch (fetchError) {
-      console.log('Could not fetch website content, proceeding with URL analysis only');
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const prompt = `Analyze this business website and provide detailed insights:
+    const { url, businessId, options = {} } = await req.json();
+    
+    if (!url) {
+      return new Response(
+        JSON.stringify({ error: 'URL is required' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-Business: ${businessName}
-Location: ${businessLocation}
-Website URL: ${website}
+    console.log('Starting advanced website analysis for:', url);
 
-Website Content:
-${websiteContent || 'Content not available - analyze based on URL and business info'}
-
-Please analyze and provide:
-1. Business summary
-2. List of services offered
-3. Pricing indicators found
-4. Pain points or challenges this business might face
-5. Business opportunities
-6. Business type classification
-7. Target market
-8. Competitive advantages
-9. Contact methods available
-10. Social media presence indicators
-
-Format your response as JSON with these keys:
-- summary
-- services (array)
-- pricingIndicators (array)
-- painPoints (array)  
-- opportunities (array)
-- businessType
-- targetMarket
-- competitiveAdvantages (array)
-- contactMethods (array)
-- socialPresence (array)`;
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert business analyst. Analyze websites and provide detailed business insights. Always respond with valid JSON.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 1200,
-        temperature: 0.3,
-      }),
+    // Create analyzer instance
+    const analyzer = await createWebsiteAnalyzer({
+      headless: true,
+      timeout: options.timeout || 30000,
+      viewport: options.viewport || { width: 1920, height: 1080 }
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-
     try {
-      const analysis = JSON.parse(content);
+      // Perform analysis
+      const analysisResult = await analyzer.analyze(url);
       
-      return new Response(JSON.stringify({ analysis }), {
+      // Store analysis results in database
+      if (businessId) {
+        // Store signals
+        for (const signal of analysisResult.signals) {
+          await supabase
+            .from('signals')
+            .upsert({
+              business_id: businessId,
+              type: signal.type,
+              value_json: { detected: signal.detected, metadata: signal.metadata },
+              confidence: signal.confidence,
+              evidence_url: url,
+              evidence_snippet: signal.evidence,
+              source_key: 'website_analyzer_v2'
+            });
+        }
+
+        // Store website analysis metadata
+        await supabase
+          .from('website_analyses')
+          .insert({
+            business_id: businessId,
+            url,
+            status: analysisResult.status,
+            technologies: analysisResult.technologies,
+            performance_json: analysisResult.performance,
+            seo_json: analysisResult.seo,
+            security_json: analysisResult.security,
+            accessibility_score: analysisResult.accessibility.score,
+            content_summary: {
+              title: analysisResult.content.title,
+              description: analysisResult.content.description,
+              word_count: analysisResult.content.wordCount,
+              forms_count: analysisResult.content.forms.length,
+              images_count: analysisResult.content.images.length
+            },
+            analyzed_at: analysisResult.timestamp,
+            analyzer_version: '2.0'
+          });
+
+        // Update business with latest website info
+        await supabase
+          .from('businesses')
+          .update({
+            website: url,
+            website_status: analysisResult.status,
+            last_analyzed: analysisResult.timestamp
+          })
+          .eq('id', businessId);
+      }
+
+      // Process insights for scoring
+      const insights = processAnalysisForScoring(analysisResult);
+
+      return new Response(JSON.stringify({
+        success: true,
+        url,
+        status: analysisResult.status,
+        signals: analysisResult.signals,
+        technologies: analysisResult.technologies,
+        performance: analysisResult.performance,
+        seo: analysisResult.seo,
+        security: analysisResult.security,
+        accessibility: analysisResult.accessibility,
+        content: {
+          title: analysisResult.content.title,
+          description: analysisResult.content.description,
+          forms: analysisResult.content.forms.map(f => ({
+            purpose: f.purpose,
+            fields_count: f.fields.length,
+            has_submit: f.hasSubmitButton
+          }))
+        },
+        insights,
+        timestamp: analysisResult.timestamp
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', content);
-      
-      // Fallback: create structured response
-      const analysis = {
-        summary: `Website analysis for ${businessName}`,
-        services: ['General business services'],
-        pricingIndicators: ['Contact for pricing'],
-        painPoints: ['Limited online presence'],
-        opportunities: ['Digital marketing improvement'],
-        businessType: 'Small business',
-        targetMarket: 'Local customers',
-        competitiveAdvantages: ['Local presence'],
-        contactMethods: ['Website contact form'],
-        socialPresence: ['Website only']
-      };
-      
-      return new Response(JSON.stringify({ analysis }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+
+    } finally {
+      await analyzer.close();
     }
+
   } catch (error) {
     console.error('Error in analyze-website function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }), 
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
+
+function processAnalysisForScoring(analysis: any) {
+  const insights = {
+    digitalMaturity: 0,
+    opportunities: [],
+    strengths: [],
+    weaknesses: [],
+    recommendations: []
+  };
+
+  // Calculate digital maturity score
+  let maturityPoints = 0;
+  const maxPoints = 100;
+
+  // Performance scoring (25 points)
+  if (analysis.performance.loadTime < 3000) maturityPoints += 10;
+  else if (analysis.performance.loadTime < 5000) maturityPoints += 5;
+  
+  if (analysis.performance.largestContentfulPaint < 2500) maturityPoints += 10;
+  else if (analysis.performance.largestContentfulPaint < 4000) maturityPoints += 5;
+  
+  if (analysis.performance.cumulativeLayoutShift < 0.1) maturityPoints += 5;
+
+  // Security scoring (20 points)
+  if (analysis.security.https) maturityPoints += 10;
+  if (analysis.security.hsts) maturityPoints += 5;
+  if (analysis.security.contentSecurityPolicy) maturityPoints += 5;
+
+  // SEO scoring (20 points)
+  if (analysis.seo.metaTags.description) maturityPoints += 5;
+  if (analysis.seo.canonicalUrl) maturityPoints += 5;
+  if (analysis.seo.headingStructure) maturityPoints += 5;
+  if (analysis.seo.imageOptimization) maturityPoints += 5;
+
+  // Accessibility scoring (15 points)
+  if (analysis.accessibility.score >= 90) maturityPoints += 15;
+  else if (analysis.accessibility.score >= 70) maturityPoints += 10;
+  else if (analysis.accessibility.score >= 50) maturityPoints += 5;
+
+  // Technology & Features scoring (20 points)
+  const hasChat = analysis.signals.find((s: any) => s.type === 'has_chatbot' && s.detected);
+  const hasBooking = analysis.signals.find((s: any) => s.type === 'has_online_booking' && s.detected);
+  const hasAnalytics = analysis.signals.find((s: any) => s.type === 'has_analytics' && s.detected);
+  const hasPayment = analysis.signals.find((s: any) => s.type === 'has_payment_processor' && s.detected);
+  const hasCRM = analysis.signals.find((s: any) => s.type === 'has_crm' && s.detected);
+
+  if (hasChat) maturityPoints += 5;
+  if (hasBooking) maturityPoints += 5;
+  if (hasAnalytics) maturityPoints += 4;
+  if (hasPayment) maturityPoints += 3;
+  if (hasCRM) maturityPoints += 3;
+
+  insights.digitalMaturity = Math.round((maturityPoints / maxPoints) * 100);
+
+  // Identify opportunities
+  if (!hasChat) {
+    insights.opportunities.push({
+      type: 'chatbot',
+      impact: 'high',
+      description: 'No chat widget detected. Adding live chat could increase engagement by 20-40%.'
+    });
+  }
+
+  if (!hasBooking && analysis.content.forms.some((f: any) => f.purpose === 'contact')) {
+    insights.opportunities.push({
+      type: 'online_booking',
+      impact: 'high',
+      description: 'Contact form present but no online booking. Automated scheduling could save 5-10 hours/week.'
+    });
+  }
+
+  if (!hasAnalytics) {
+    insights.opportunities.push({
+      type: 'analytics',
+      impact: 'medium',
+      description: 'No analytics tracking detected. Cannot measure website performance or visitor behavior.'
+    });
+  }
+
+  if (analysis.performance.loadTime > 5000) {
+    insights.opportunities.push({
+      type: 'performance',
+      impact: 'high',
+      description: `Page load time is ${Math.round(analysis.performance.loadTime / 1000)}s. Optimizing could improve conversion by 7% per second saved.`
+    });
+  }
+
+  if (!analysis.seo.metaTags.description) {
+    insights.opportunities.push({
+      type: 'seo',
+      impact: 'medium',
+      description: 'Missing meta description. Adding one could improve click-through rates from search by 5-10%.'
+    });
+  }
+
+  // Identify strengths
+  if (analysis.security.https) {
+    insights.strengths.push('Secure HTTPS connection');
+  }
+
+  if (hasAnalytics) {
+    insights.strengths.push('Analytics tracking implemented');
+  }
+
+  if (analysis.signals.find((s: any) => s.type === 'mobile_responsive' && s.detected)) {
+    insights.strengths.push('Mobile responsive design');
+  }
+
+  if (analysis.signals.find((s: any) => s.type === 'social_media_active' && s.detected)) {
+    insights.strengths.push('Active social media presence');
+  }
+
+  // Identify weaknesses
+  if (!analysis.security.https) {
+    insights.weaknesses.push('No HTTPS - security risk and SEO penalty');
+  }
+
+  if (analysis.accessibility.score < 70) {
+    insights.weaknesses.push(`Poor accessibility score (${analysis.accessibility.score}/100)`);
+  }
+
+  if (!analysis.signals.find((s: any) => s.type === 'mobile_responsive' && s.detected)) {
+    insights.weaknesses.push('Not mobile responsive - losing 60%+ of potential traffic');
+  }
+
+  // Generate recommendations
+  insights.recommendations = insights.opportunities
+    .sort((a, b) => {
+      const impactWeight = { high: 3, medium: 2, low: 1 };
+      return impactWeight[b.impact as keyof typeof impactWeight] - impactWeight[a.impact as keyof typeof impactWeight];
+    })
+    .slice(0, 3)
+    .map(opp => opp.description);
+
+  return insights;
+}
