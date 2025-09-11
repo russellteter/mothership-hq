@@ -135,10 +135,37 @@ const Index = () => {
   };
 
   const handleSignalOverride = async (signalId: string, isCorrect: boolean) => {
-    // TODO: Implement signal override functionality
-    console.log('Signal override:', signalId, isCorrect);
-    // This would update the signal in the database
-    // For now, just a placeholder
+    try {
+      // Update the signal override in the database
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      
+      const { error } = await supabase
+        .from('signal_overrides')
+        .insert({
+          business_id: selectedLead?.business.id,
+          signal_id: signalId,
+          user_id: userData.user?.id,
+          is_correct: isCorrect
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Signal Feedback Recorded",
+        description: `Signal marked as ${isCorrect ? 'correct' : 'incorrect'}. This will help improve future results.`
+      });
+      
+      // Optionally refresh the lead data to show updated signals
+      // This could trigger a re-fetch of the lead's signals
+    } catch (error) {
+      console.error('Error recording signal override:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record signal feedback",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleRunSavedSearch = async (dsl: LeadQuery) => {
