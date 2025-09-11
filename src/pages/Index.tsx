@@ -3,7 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings } from 'lucide-react';
+import { 
+  Download, 
+  LayoutGrid, 
+  Table as TableIcon, 
+  LogOut, 
+  Loader2, 
+  Home, 
+  Search, 
+  Filter, 
+  Settings,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';

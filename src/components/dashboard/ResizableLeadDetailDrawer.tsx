@@ -483,6 +483,52 @@ export function ResizableLeadDetailDrawer({
                   </CardContent>
                 </Card>
 
+                {/* Business Metrics */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Key Metrics</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Market Size</p>
+                        <p className="text-lg font-semibold">
+                          {lead.business.categories?.includes('restaurant') ? '$10-50K/mo' : 
+                           lead.business.categories?.includes('retail') ? '$20-100K/mo' : 
+                           '$15-75K/mo'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Est. Employees</p>
+                        <p className="text-lg font-semibold">
+                          {lead.review_count && lead.review_count > 100 ? '10-50' : 
+                           lead.review_count && lead.review_count > 50 ? '5-10' : 
+                           '1-5'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Years in Business</p>
+                        <p className="text-lg font-semibold">
+                          {lead.review_count && lead.review_count > 200 ? '10+' : 
+                           lead.review_count && lead.review_count > 100 ? '5-10' : 
+                           '1-5'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Digital Presence</p>
+                        <div className="flex items-center gap-1">
+                          {lead.website && <Globe className="w-4 h-4 text-success" />}
+                          {lead.phone && <Phone className="w-4 h-4 text-success" />}
+                          {lead.review_count && lead.review_count > 0 && <Star className="w-4 h-4 text-success" />}
+                          <span className="text-sm font-medium ml-1">
+                            {[lead.website, lead.phone, lead.review_count && lead.review_count > 0].filter(Boolean).length}/3
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Tags */}
                 <Card>
                   <CardHeader className="pb-3">
