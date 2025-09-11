@@ -28,7 +28,10 @@ import {
   ArrowRight,
   GripVertical,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Copy,
+  Download,
+  Share2
 } from 'lucide-react';
 import { Lead, Signal } from '@/types/lead';
 import { useAIInsights } from '@/hooks/useAIInsights';
@@ -132,8 +135,9 @@ export function ResizableLeadDetailDrawer({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing) return;
     
-    const deltaX = e.clientX - startX.current;
-    const newWidth = Math.max(400, Math.min(window.innerWidth - 100, startWidth.current + deltaX));
+    // For right panel, we need to subtract deltaX to expand left
+    const deltaX = startX.current - e.clientX;
+    const newWidth = Math.max(400, Math.min(window.innerWidth - 200, startWidth.current + deltaX));
     setWidth(newWidth);
   }, [isResizing]);
 
@@ -240,14 +244,16 @@ export function ResizableLeadDetailDrawer({
         className="overflow-y-auto p-0 max-w-none border-l-2"
         style={{ width: currentWidth }}
       >
-        {/* Resize Handle */}
-        <div 
-          ref={resizeRef}
-          className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize bg-primary/20 hover:bg-primary/40 transition-colors z-50 flex items-center justify-center"
-          onMouseDown={handleMouseDown}
-        >
-          <GripVertical className="w-4 h-4 text-primary" />
-        </div>
+        {/* Resize Handle - Only show when not maximized */}
+        {!isMaximized && (
+          <div 
+            ref={resizeRef}
+            className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize bg-border hover:bg-primary/40 transition-colors z-50 flex items-center justify-center group"
+            onMouseDown={handleMouseDown}
+          >
+            <div className="w-1 h-8 bg-primary/60 group-hover:bg-primary rounded-sm transition-colors" />
+          </div>
+        )}
 
         <div className="p-6">
           <SheetHeader>
@@ -255,14 +261,35 @@ export function ResizableLeadDetailDrawer({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
                   <SheetTitle className="text-xl truncate">{lead.name}</SheetTitle>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsMaximized(!isMaximized)}
-                    className="shrink-0"
-                  >
-                    {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigator.clipboard.writeText(`${lead.name} - ${lead.phone} - ${lead.website || 'No website'}`)}
+                      className="h-8 w-8 p-0"
+                      title="Copy lead info"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsMaximized(!isMaximized)}
+                      className="h-8 w-8 p-0"
+                      title={isMaximized ? "Minimize panel" : "Maximize panel"}
+                    >
+                      {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={onClose}
+                      className="h-8 w-8 p-0"
+                      title="Close panel"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -273,21 +300,21 @@ export function ResizableLeadDetailDrawer({
               </div>
               <div className="text-right shrink-0 ml-4">
                 <div className={`text-2xl font-bold ${getScoreColor(lead.score)}`}>
-                  {lead.score}
+                  {lead.score}/100
                 </div>
-                <div className="text-xs text-muted-foreground">Score</div>
+                <div className="text-xs text-muted-foreground">Lead Score</div>
               </div>
             </div>
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
-            {/* Status Controls */}
+            {/* Quick Actions Bar */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Lead Status</CardTitle>
+                <CardTitle className="text-sm">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button 
                     size="sm" 
                     variant={lead.status === 'new' ? 'default' : 'outline'}
@@ -308,6 +335,43 @@ export function ResizableLeadDetailDrawer({
                     onClick={() => onStatusChange('ignored')}
                   >
                     Ignored
+                  </Button>
+                  {lead.phone && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.open(`tel:${lead.phone}`, '_blank')}
+                    >
+                      <Phone className="w-3 h-3 mr-1" />
+                      Call
+                    </Button>
+                  )}
+                  {lead.people.find(p => p.email) && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.open(`mailto:${lead.people.find(p => p.email)?.email}`, '_blank')}
+                    >
+                      <Mail className="w-3 h-3 mr-1" />
+                      Email
+                    </Button>
+                  )}
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      const csvContent = `Name,Phone,Website,Email,Address,Score\n"${lead.name}","${lead.phone || ''}","${lead.website || ''}","${lead.people.find(p => p.email)?.email || ''}","${lead.business.address_json.street}, ${lead.city}, ${lead.state}","${lead.score}"\n`;
+                      const blob = new Blob([csvContent], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${lead.name.replace(/[^a-zA-Z0-9]/g, '_')}_lead.csv`;
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                    }}
+                  >
+                    <Download className="w-3 h-3 mr-1" />
+                    Export
                   </Button>
                 </div>
               </CardContent>
