@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings } from 'lucide-react';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings, X } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
-import { ResizableLeadDetailDrawer } from '@/components/dashboard/ResizableLeadDetailDrawer';
+import { LeadDetailPanel } from '@/components/dashboard/LeadDetailPanel';
 import { BoardView } from '@/components/dashboard/BoardView';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { SavedSearchesTable } from '@/components/dashboard/SavedSearchesTable';
@@ -22,7 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isLeadDetailOpen, setIsLeadDetailOpen] = useState(false);
   const [activeView, setActiveView] = useState<'dashboard' | 'table' | 'board'>('dashboard');
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -114,7 +115,7 @@ const Index = () => {
 
   const handleLeadSelect = (lead: Lead) => {
     setSelectedLead(lead);
-    setIsDrawerOpen(true);
+    setIsLeadDetailOpen(true);
   };
 
   const handleStatusChange = async (leadId: string, status: 'new' | 'qualified' | 'ignored') => {
@@ -233,186 +234,196 @@ const Index = () => {
     <div className="h-screen flex bg-background">
       {showSearchPanel && <SearchPanel onSearch={handleSearch} isSearching={isSearching} />}
       
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="border-b border-border/50 p-6 bg-card/30">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">SMB Lead Finder</h1>
-              <p className="text-sm text-muted-foreground mt-1">Welcome back, {user?.email}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'dashboard' | 'table' | 'board')}>
-                <TabsList>
-                  <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                    <Home className="w-4 h-4" />
-                    Dashboard
-                  </TabsTrigger>
-                  <TabsTrigger value="table" className="flex items-center gap-2">
-                    <TableIcon className="w-4 h-4" />
-                    Table View
-                  </TabsTrigger>
-                  <TabsTrigger value="board" className="flex items-center gap-2">
-                    <LayoutGrid className="w-4 h-4" />
-                    Board View
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-medium">
-                  {filteredLeads.length} of {searchResults.length} leads
-                </Badge>
-                {selectedLeadIds.length > 0 && (
-                  <Badge variant="secondary" className="font-medium">
-                    {selectedLeadIds.length} selected
-                  </Badge>
-                )}
-                {currentSearchJob && (
-                  <Badge variant="secondary" className="font-medium">
-                    Status: {currentSearchJob.status}
-                  </Badge>
-                )}
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanel defaultSize={isLeadDetailOpen ? 70 : 100} minSize={30}>
+          <div className="flex-1 flex flex-col h-full">
+            {/* Header */}
+            <div className="border-b border-border/50 p-6 bg-card/30">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-semibold tracking-tight">SMB Lead Finder</h1>
+                  <p className="text-sm text-muted-foreground mt-1">Welcome back, {user?.email}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'dashboard' | 'table' | 'board')}>
+                    <TabsList>
+                      <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                        <Home className="w-4 h-4" />
+                        Dashboard
+                      </TabsTrigger>
+                      <TabsTrigger value="table" className="flex items-center gap-2">
+                        <TableIcon className="w-4 h-4" />
+                        Table View
+                      </TabsTrigger>
+                      <TabsTrigger value="board" className="flex items-center gap-2">
+                        <LayoutGrid className="w-4 h-4" />
+                        Board View
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-medium">
+                      {filteredLeads.length} of {searchResults.length} leads
+                    </Badge>
+                    {selectedLeadIds.length > 0 && (
+                      <Badge variant="secondary" className="font-medium">
+                        {selectedLeadIds.length} selected
+                      </Badge>
+                    )}
+                    {currentSearchJob && (
+                      <Badge variant="secondary" className="font-medium">
+                        Status: {currentSearchJob.status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {activeView !== 'dashboard' && (
+                    <>
+                      <Button 
+                        onClick={() => setShowSearchPanel(!showSearchPanel)} 
+                        variant="outline" 
+                        className="flex items-center gap-2"
+                      >
+                        <Search className="w-4 h-4" />
+                        {showSearchPanel ? 'Hide Search' : 'Search'}
+                      </Button>
+                      <Button 
+                        onClick={() => setShowScoringSettings(!showScoringSettings)} 
+                        variant="outline" 
+                        className="flex items-center gap-2"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Scoring
+                      </Button>
+                    </>
+                  )}
+                  <Button 
+                    onClick={exportToCsv} 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    disabled={searchResults.length === 0 || activeView === 'dashboard'}
+                  >
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </Button>
+                </div>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              {activeView !== 'dashboard' && (
-                <>
-                  <Button 
-                    onClick={() => setShowSearchPanel(!showSearchPanel)} 
-                    variant="outline" 
-                    className="flex items-center gap-2"
-                  >
-                    <Search className="w-4 h-4" />
-                    {showSearchPanel ? 'Hide Search' : 'Search'}
-                  </Button>
-                  <Button 
-                    onClick={() => setShowScoringSettings(!showScoringSettings)} 
-                    variant="outline" 
-                    className="flex items-center gap-2"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Scoring
-                  </Button>
-                </>
+
+            <div className="flex-1 overflow-auto">
+              {activeView === 'dashboard' ? (
+                <div className="p-6 space-y-6">
+                  <DashboardHome 
+                    onViewSearch={handleViewSearch}
+                    onStartNewSearch={handleStartNewSearch}
+                    onRunSearch={handleRunSavedSearch}
+                  />
+                  <SavedSearchesTable onRunSearch={handleRunSavedSearch} />
+                  {showScoringSettings && (
+                    <LeadScoringProfiles
+                      currentProfile={currentScoringProfile}
+                      onProfileChange={setCurrentScoringProfile}
+                      onWeightsChange={(weights) => {
+                        // This would trigger re-scoring in a real implementation
+                        console.log('Scoring weights updated:', weights);
+                      }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="p-4">
+                  <AdvancedFilters
+                    leads={searchResults}
+                    onFilterChange={setFilteredLeads}
+                    isVisible={showAdvancedFilters}
+                    onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  />
+                  <BulkOperations
+                    leads={filteredLeads}
+                    selectedLeads={selectedLeadIds}
+                    onSelectionChange={setSelectedLeadIds}
+                    onStatusChange={handleBulkStatusChange}
+                    onBulkTag={handleBulkTag}
+                    onBulkExport={handleBulkExport}
+                  />
+                  {activeView === 'table' ? (
+                    <LeadsTable
+                      leads={filteredLeads}
+                      selectedLead={selectedLead}
+                      onLeadSelect={handleLeadSelect}
+                      isLoading={isSearching}
+                      searchJob={currentSearchJob}
+                      onSaveSearch={async (customName) => {
+                        if (currentSearchJob) {
+                          try {
+                            const { error } = await supabase
+                              .from('saved_searches')
+                              .insert({
+                                name: customName,
+                                dsl_json: currentSearchJob.dsl_json as any,
+                                user_id: user?.id
+                              });
+                            
+                            if (error) throw error;
+                            
+                            toast({
+                              title: "Search Saved",
+                              description: `Saved as "${customName}"`
+                            });
+                          } catch (error) {
+                            console.error('Error saving search:', error);
+                            toast({
+                              title: "Save Failed",
+                              description: "Could not save the search",
+                              variant: "destructive"
+                            });
+                          }
+                        }
+                      }}
+                      onEditSearch={() => {
+                        setShowSearchPanel(true);
+                      }}
+                    />
+                  ) : (
+                    <BoardView
+                      leads={filteredLeads}
+                      onLeadSelect={handleLeadSelect}
+                      onStatusChange={handleStatusChange}
+                    />
+                  )}
+                </div>
               )}
-              <Button 
-                onClick={exportToCsv} 
-                variant="outline" 
-                className="flex items-center gap-2"
-                disabled={searchResults.length === 0 || activeView === 'dashboard'}
-              >
-                <Download className="w-4 h-4" />
-                Export CSV
-              </Button>
             </div>
           </div>
-        </div>
+        </ResizablePanel>
 
-        <div className="flex-1 overflow-auto">
-          {activeView === 'dashboard' ? (
-            <div className="p-6 space-y-6">
-              <DashboardHome 
-                onViewSearch={handleViewSearch}
-                onStartNewSearch={handleStartNewSearch}
-                onRunSearch={handleRunSavedSearch}
+        {isLeadDetailOpen && selectedLead && (
+          <>
+            <ResizableHandle withHandle className="w-2 bg-border hover:bg-muted transition-colors" />
+            <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+              <LeadDetailPanel
+                lead={selectedLead}
+                onClose={() => setIsLeadDetailOpen(false)}
+                onStatusChange={(status) => handleStatusChange(selectedLead.business.id, status)}
+                onAddNote={handleAddNote}
+                onAddTag={handleAddTag}
+                onSignalOverride={handleSignalOverride}
               />
-              <SavedSearchesTable onRunSearch={handleRunSavedSearch} />
-              {showScoringSettings && (
-                <LeadScoringProfiles
-                  currentProfile={currentScoringProfile}
-                  onProfileChange={setCurrentScoringProfile}
-                  onWeightsChange={(weights) => {
-                    // This would trigger re-scoring in a real implementation
-                    console.log('Scoring weights updated:', weights);
-                  }}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="p-4">
-              <AdvancedFilters
-                leads={searchResults}
-                onFilterChange={setFilteredLeads}
-                isVisible={showAdvancedFilters}
-                onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              />
-              <BulkOperations
-                leads={filteredLeads}
-                selectedLeads={selectedLeadIds}
-                onSelectionChange={setSelectedLeadIds}
-                onStatusChange={handleBulkStatusChange}
-                onBulkTag={handleBulkTag}
-                onBulkExport={handleBulkExport}
-              />
-              {activeView === 'table' ? (
-                <LeadsTable
-                  leads={filteredLeads}
-                  selectedLead={selectedLead}
-                  onLeadSelect={handleLeadSelect}
-                  isLoading={isSearching}
-                  searchJob={currentSearchJob}
-                  onSaveSearch={async (customName) => {
-                    if (currentSearchJob) {
-                      try {
-                        const { error } = await supabase
-                          .from('saved_searches')
-                          .insert({
-                            name: customName,
-                            dsl_json: currentSearchJob.dsl_json as any,
-                            user_id: user?.id
-                          });
-                        
-                        if (error) throw error;
-                        
-                        toast({
-                          title: "Search Saved",
-                          description: `Saved as "${customName}"`
-                        });
-                      } catch (error) {
-                        console.error('Error saving search:', error);
-                        toast({
-                          title: "Save Failed",
-                          description: "Could not save the search",
-                          variant: "destructive"
-                        });
-                      }
-                    }
-                  }}
-                  onEditSearch={() => {
-                    setShowSearchPanel(true);
-                  }}
-                />
-              ) : (
-                <BoardView
-                  leads={filteredLeads}
-                  onLeadSelect={handleLeadSelect}
-                  onStatusChange={handleStatusChange}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <ResizableLeadDetailDrawer
-        lead={selectedLead}
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        onStatusChange={(status) => selectedLead && handleStatusChange(selectedLead.business.id, status)}
-        onAddNote={handleAddNote}
-        onAddTag={handleAddTag}
-        onSignalOverride={handleSignalOverride}
-      />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
     </div>
   );
 };
