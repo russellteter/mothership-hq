@@ -7,16 +7,20 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings, X } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
-import { LeadsTable } from '@/components/dashboard/LeadsTable';
+import { VirtualizedLeadsTable } from '@/components/dashboard/VirtualizedLeadsTable';
 import { LeadDetailPanel } from '@/components/dashboard/LeadDetailPanel';
 import { BoardView } from '@/components/dashboard/BoardView';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { SavedSearchesTable } from '@/components/dashboard/SavedSearchesTable';
+import { SearchResultsBanner } from '@/components/dashboard/SearchResultsBanner';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { BulkOperations } from '@/components/dashboard/BulkOperations';
 import { LeadScoringProfiles } from '@/components/dashboard/LeadScoringProfiles';
+import { StickyHeader } from '@/components/ui/sticky-header';
+import { EmptyState, ErrorState, LoadingState, TableSkeleton } from '@/components/ui/standard-states';
 import { Lead, LeadQuery } from '@/types/lead';
 import { useLeadSearch } from '@/hooks/useLeadSearch';
+import { useSearchState } from '@/hooks/useSearchState';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,6 +49,8 @@ const Index = () => {
     addNote,
     addTag
   } = useLeadSearch();
+
+  const { searchState, updateState, resetState } = useSearchState();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -79,6 +85,8 @@ const Index = () => {
 
   const handleSearch = async (prompt: string) => {
     try {
+      updateState('parsing', 'Understanding your request...', 10);
+      
       // Parse the prompt first
       const parseResult = await parsePrompt(prompt);
       
@@ -90,8 +98,13 @@ const Index = () => {
         });
       }
 
+      updateState('queued', 'Search queued, starting soon...', 25);
+
       // Start the search with original prompt for context
+      updateState('running', 'Finding leads...', 50);
       await searchLeads(parseResult.dsl, prompt);
+      
+      updateState('completed', 'Search completed successfully', 100);
       
       // Switch to table view to see results
       setActiveView('table');
@@ -99,6 +112,7 @@ const Index = () => {
       
     } catch (error) {
       console.error('Search failed:', error);
+      updateState('failed', 'Search failed');
     }
   };
 
@@ -237,7 +251,18 @@ const Index = () => {
       <ResizablePanelGroup direction="horizontal" className="h-full">
         <ResizablePanel defaultSize={isLeadDetailOpen ? 70 : 100} minSize={30}>
           <div className="flex-1 flex flex-col h-full">
-            {/* Header */}
+            {/* Sticky Header */}
+            <StickyHeader
+              resultsCount={searchResults.length}
+              elapsedTime={searchState.elapsedTime}
+              searchState={searchState.state}
+              progress={searchState.progress}
+              onExport={exportToCsv}
+              onOpenScoring={() => setShowScoringSettings(!showScoringSettings)}
+              onOpenSearch={() => setShowSearchPanel(!showSearchPanel)}
+            />
+            
+            {/* Main Header */}
             <div className="border-b border-border/50 p-6 bg-card/30">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -342,13 +367,49 @@ const Index = () => {
                   )}
                 </div>
               ) : (
-                <div className="p-4">
+                <div className="p-4 space-y-4">
+                  {/* Search Results Banner */}
+                  <SearchResultsBanner
+                    searchJob={currentSearchJob}
+                    resultsCount={searchResults.length}
+                    onSaveSearch={async (customName) => {
+                      if (currentSearchJob) {
+                        try {
+                          const { error } = await supabase
+                            .from('saved_searches')
+                            .insert({
+                              name: customName,
+                              dsl_json: currentSearchJob.dsl_json as any,
+                              user_id: user?.id
+                            });
+                          
+                          if (error) throw error;
+                          
+                          toast({
+                            title: "Search Saved",
+                            description: `Saved as "${customName}"`
+                          });
+                        } catch (error) {
+                          console.error('Error saving search:', error);
+                          toast({
+                            title: "Save Failed",
+                            description: "Could not save the search",
+                            variant: "destructive"
+                          });
+                        }
+                      }
+                    }}
+                    onEditSearch={() => setShowSearchPanel(true)}
+                    onRetry={() => currentSearchJob && handleSearch(currentSearchJob.original_prompt || '')}
+                  />
+
                   <AdvancedFilters
                     leads={searchResults}
                     onFilterChange={setFilteredLeads}
                     isVisible={showAdvancedFilters}
                     onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
                   />
+                  
                   <BulkOperations
                     leads={filteredLeads}
                     selectedLeads={selectedLeadIds}
@@ -357,44 +418,29 @@ const Index = () => {
                     onBulkTag={handleBulkTag}
                     onBulkExport={handleBulkExport}
                   />
+                  
                   {activeView === 'table' ? (
-                    <LeadsTable
-                      leads={filteredLeads}
-                      selectedLead={selectedLead}
-                      onLeadSelect={handleLeadSelect}
-                      isLoading={isSearching}
-                      searchJob={currentSearchJob}
-                      onSaveSearch={async (customName) => {
-                        if (currentSearchJob) {
-                          try {
-                            const { error } = await supabase
-                              .from('saved_searches')
-                              .insert({
-                                name: customName,
-                                dsl_json: currentSearchJob.dsl_json as any,
-                                user_id: user?.id
-                              });
-                            
-                            if (error) throw error;
-                            
-                            toast({
-                              title: "Search Saved",
-                              description: `Saved as "${customName}"`
-                            });
-                          } catch (error) {
-                            console.error('Error saving search:', error);
-                            toast({
-                              title: "Save Failed",
-                              description: "Could not save the search",
-                              variant: "destructive"
-                            });
-                          }
-                        }
-                      }}
-                      onEditSearch={() => {
-                        setShowSearchPanel(true);
-                      }}
-                    />
+                    isSearching ? (
+                      <TableSkeleton rows={10} />
+                    ) : filteredLeads.length === 0 ? (
+                      <EmptyState
+                        title="No leads found"
+                        description="Try adjusting your search criteria or expanding your location radius."
+                        action={{
+                          label: "Start New Search",
+                          onClick: () => setShowSearchPanel(true)
+                        }}
+                      />
+                    ) : (
+                      <VirtualizedLeadsTable
+                        leads={filteredLeads}
+                        selectedLead={selectedLead}
+                        onLeadSelect={handleLeadSelect}
+                        selectedLeads={selectedLeadIds}
+                        onSelectionChange={setSelectedLeadIds}
+                        height={500}
+                      />
+                    )
                   ) : (
                     <BoardView
                       leads={filteredLeads}
