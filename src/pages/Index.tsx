@@ -623,7 +623,6 @@ const Index = () => {
                   )}
                 </div>
               )}
-<<<<<<< HEAD
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -651,8 +650,6 @@ const Index = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-=======
->>>>>>> origin/main
             </div>
           </div>
         </ResizablePanel>
