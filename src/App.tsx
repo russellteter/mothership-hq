@@ -12,9 +12,9 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Initialize dark theme on first load
+  // Initialize light theme on first load
   useEffect(() => {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.add('light');
   }, []);
 
   return (

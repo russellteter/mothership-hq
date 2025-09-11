@@ -21,12 +21,12 @@ export function useTheme() {
 export function useThemeContext() {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as Theme) || 'dark'; // Default to dark theme
+      return (localStorage.getItem('theme') as Theme) || 'light'; // Default to light theme
     }
-    return 'dark';
+    return 'light';
   });
 
-  const [actualTheme, setActualTheme] = useState<'dark' | 'light'>('dark');
+  const [actualTheme, setActualTheme] = useState<'dark' | 'light'>('light');
 
   useEffect(() => {
     const root = window.document.documentElement;
