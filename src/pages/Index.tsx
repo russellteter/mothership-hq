@@ -18,6 +18,7 @@ import { Lead, LeadQuery } from '@/types/lead';
 import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -360,9 +361,32 @@ const Index = () => {
                   onLeadSelect={handleLeadSelect}
                   isLoading={isSearching}
                   searchJob={currentSearchJob}
-                  onSaveSearch={(customName) => {
-                    // TODO: Implement save search functionality
-                    console.log('Save search with custom name:', customName);
+                  onSaveSearch={async (customName) => {
+                    if (currentSearchJob) {
+                      try {
+                        const { error } = await supabase
+                          .from('saved_searches')
+                          .insert({
+                            name: customName,
+                            dsl_json: currentSearchJob.dsl_json as any,
+                            user_id: user?.id
+                          });
+                        
+                        if (error) throw error;
+                        
+                        toast({
+                          title: "Search Saved",
+                          description: `Saved as "${customName}"`
+                        });
+                      } catch (error) {
+                        console.error('Error saving search:', error);
+                        toast({
+                          title: "Save Failed",
+                          description: "Could not save the search",
+                          variant: "destructive"
+                        });
+                      }
+                    }
                   }}
                   onEditSearch={() => {
                     setShowSearchPanel(true);

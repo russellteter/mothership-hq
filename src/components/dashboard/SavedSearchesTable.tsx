@@ -63,22 +63,21 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
 
   const loadSavedSearches = async () => {
     try {
-      const { data: searchJobs } = await supabase
-        .from('search_jobs')
+      const { data: savedSearchesData } = await supabase
+        .from('saved_searches')
         .select('*')
         .eq('user_id', user?.id)
-        .eq('status', 'completed')
         .order('created_at', { ascending: false });
 
-      if (searchJobs) {
-        const saved = searchJobs.map(job => ({
-          id: job.id,
-          name: generateSearchName(job.dsl_json as unknown as LeadQuery),
-          dsl_json: job.dsl_json as unknown as LeadQuery,
+      if (savedSearchesData) {
+        const saved = savedSearchesData.map(search => ({
+          id: search.id,
+          name: search.name,
+          dsl_json: search.dsl_json as unknown as LeadQuery,
           notifications_enabled: false,
-          created_at: job.created_at,
-          last_run_at: job.created_at,
-          total_leads_found: (job.summary_stats as any)?.total_found || 0
+          created_at: search.created_at,
+          last_run_at: search.updated_at,
+          total_leads_found: 0 // We could join with search_jobs to get this if needed
         }));
         setSavedSearches(saved);
       }
