@@ -269,26 +269,23 @@ async function analyzeWebsite(url: string): Promise<{ signals: Signal[], people:
       source_key: 'http_fetch'
     });
     
-    // Enhanced owner identification and contact extraction
+    // Simple owner identification (contact extraction temporarily disabled)
     const ownerMatch = ownerPatterns.some(pattern => lowerHtml.includes(pattern));
-    if (ownerMatch) {
-      signals.push({
-        business_id: '',
-        type: 'owner_identified',
-        value_json: true,
-        confidence: 0.7,
-        evidence_url: url,
-        evidence_snippet: `Found owner pattern: ${ownerPatterns.find(p => lowerHtml.includes(p))}`,
-        source_key: 'http_fetch'
-      });
-    }
-    
-    // Extract owner contact information
-    const extractedContacts = extractOwnerContacts(html, url);
-    people.push(...extractedContacts);
+    signals.push({
+      business_id: '',
+      type: 'owner_identified',
+      value_json: ownerMatch,
+      confidence: 0.7,
+      evidence_url: url,
+      evidence_snippet: ownerMatch ? 
+        `Found owner pattern: ${ownerPatterns.find(p => lowerHtml.includes(p))}` : 
+        'No owner patterns found',
+      source_key: 'http_fetch'
+    });
     
   } catch (error) {
     console.error('Website analysis error:', error);
+    // Return basic signals even on error
     signals.push({
       business_id: '',
       type: 'no_website',
@@ -296,6 +293,36 @@ async function analyzeWebsite(url: string): Promise<{ signals: Signal[], people:
       confidence: 0.8,
       evidence_url: url,
       evidence_snippet: `Website analysis failed: ${error.message}`,
+      source_key: 'http_fetch'
+    });
+    
+    signals.push({
+      business_id: '',
+      type: 'has_chatbot',
+      value_json: false,
+      confidence: 0.5,
+      evidence_url: url,
+      evidence_snippet: 'Could not analyze for chatbot due to error',
+      source_key: 'http_fetch'
+    });
+    
+    signals.push({
+      business_id: '',
+      type: 'has_online_booking',
+      value_json: false,
+      confidence: 0.5,
+      evidence_url: url,
+      evidence_snippet: 'Could not analyze for booking due to error',
+      source_key: 'http_fetch'
+    });
+    
+    signals.push({
+      business_id: '',
+      type: 'owner_identified',
+      value_json: false,
+      confidence: 0.5,
+      evidence_url: url,
+      evidence_snippet: 'Could not analyze for owner due to error',
       source_key: 'http_fetch'
     });
   }
