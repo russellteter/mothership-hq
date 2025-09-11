@@ -8,6 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScoreDisplay, ScoreBreakdown } from '@/components/ui/score-display';
+import { QuickActions } from '@/components/ui/quick-actions';
+import { LazyTabContent } from '@/components/ui/lazy-tab-content';
+import { cn } from '@/lib/utils';
 import { 
   X, 
   Star, 
@@ -59,6 +63,7 @@ export function ResizableLeadDetailDrawer({
   const [width, setWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   const [realSignals, setRealSignals] = useState<Signal[]>([]);
   const [realSubscores, setRealSubscores] = useState<any>(null);
   
@@ -132,8 +137,9 @@ export function ResizableLeadDetailDrawer({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing) return;
     
-    const deltaX = e.clientX - startX.current;
-    const newWidth = Math.max(400, Math.min(window.innerWidth - 100, startWidth.current + deltaX));
+    // Fix deltaX calculation for right-side panel (invert the math)
+    const deltaX = startX.current - e.clientX;
+    const newWidth = Math.max(480, Math.min(window.innerWidth * 0.8, startWidth.current + deltaX));
     setWidth(newWidth);
   }, [isResizing]);
 
@@ -240,44 +246,75 @@ export function ResizableLeadDetailDrawer({
         className="overflow-y-auto p-0 max-w-none border-l-2"
         style={{ width: currentWidth }}
       >
-        {/* Resize Handle */}
+        {/* Enhanced Resize Handle */}
         <div 
           ref={resizeRef}
-          className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize bg-primary/20 hover:bg-primary/40 transition-colors z-50 flex items-center justify-center"
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize transition-all z-50 flex items-center justify-center group",
+            isResizing 
+              ? "bg-primary/60 shadow-lg" 
+              : "bg-border hover:bg-primary/30"
+          )}
           onMouseDown={handleMouseDown}
         >
-          <GripVertical className="w-4 h-4 text-primary" />
+          <div className={cn(
+            "transition-all duration-200",
+            isResizing ? "scale-110" : "group-hover:scale-105"
+          )}>
+            <GripVertical className={cn(
+              "w-4 h-4 transition-colors",
+              isResizing ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary"
+            )} />
+          </div>
         </div>
 
         <div className="p-6">
           <SheetHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <SheetTitle className="text-xl truncate">{lead.name}</SheetTitle>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsMaximized(!isMaximized)}
-                    className="shrink-0"
-                  >
-                    {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                  </Button>
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <SheetTitle className="text-xl truncate">{lead.name}</SheetTitle>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsMaximized(!isMaximized)}
+                      className="shrink-0 hover:bg-accent hover:text-accent-foreground"
+                    >
+                      {isMaximized ? 
+                        <Minimize2 className="w-4 h-4" /> : 
+                        <Maximize2 className="w-4 h-4" />
+                      }
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-muted-foreground text-sm truncate">
+                      {lead.business.address_json.street}, {lead.city}, {lead.state}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground text-sm truncate">
-                    {lead.business.address_json.street}, {lead.city}, {lead.state}
-                  </span>
-                </div>
+                <ScoreDisplay 
+                  score={lead.score} 
+                  size="md" 
+                  showProgress 
+                  className="shrink-0 ml-4"
+                />
               </div>
-              <div className="text-right shrink-0 ml-4">
-                <div className={`text-2xl font-bold ${getScoreColor(lead.score)}`}>
-                  {lead.score}
-                </div>
-                <div className="text-xs text-muted-foreground">Score</div>
+              
+              {/* Quick Actions */}
+              <div className="mt-4 pt-4 border-t">
+                <QuickActions 
+                  lead={lead}
+                  onExport={(format) => {
+                    // TODO: Implement export functionality
+                    console.log('Export', format, lead);
+                  }}
+                  onShare={() => {
+                    // TODO: Implement share functionality
+                    console.log('Share', lead);
+                  }}
+                />
               </div>
-            </div>
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
@@ -313,7 +350,7 @@ export function ResizableLeadDetailDrawer({
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="signals">Signals</TabsTrigger>
@@ -324,42 +361,23 @@ export function ResizableLeadDetailDrawer({
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
-                {/* Score Breakdown */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Score Breakdown</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">ICP Match</TableCell>
-                          <TableCell className="text-right py-2">
-                            {realSubscores?.ICP || Math.round(lead.score * 0.35)}/35
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">Pain Signals</TableCell>
-                          <TableCell className="text-right py-2">
-                            {realSubscores?.Pain || Math.round(lead.score * 0.35)}/35
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">Reachability</TableCell>
-                          <TableCell className="text-right py-2">
-                            {realSubscores?.Reachability || Math.round(lead.score * 0.20)}/20
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">Compliance Risk</TableCell>
-                          <TableCell className="text-right py-2">
-                            -{realSubscores?.ComplianceRisk || Math.round(lead.score * 0.10)}/10
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                <LazyTabContent isActive={activeTab === 'overview'}>
+                  {/* Enhanced Score Breakdown */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Score Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ScoreBreakdown 
+                        subscores={{
+                          ICP: realSubscores?.ICP || Math.round(lead.score * 0.35),
+                          Pain: realSubscores?.Pain || Math.round(lead.score * 0.35),
+                          Reachability: realSubscores?.Reachability || Math.round(lead.score * 0.20),
+                          ComplianceRisk: realSubscores?.ComplianceRisk || Math.round(lead.score * 0.10)
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
 
                 {/* Basic Info */}
                 <Card>
@@ -443,9 +461,11 @@ export function ResizableLeadDetailDrawer({
                     </div>
                   </CardContent>
                 </Card>
+                </LazyTabContent>
               </TabsContent>
 
               <TabsContent value="signals" className="space-y-4">
+                <LazyTabContent isActive={activeTab === 'signals'}>
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm">AI Detected Signals</CardTitle>
@@ -504,9 +524,11 @@ export function ResizableLeadDetailDrawer({
                     </Table>
                   </CardContent>
                 </Card>
+                </LazyTabContent>
               </TabsContent>
 
               <TabsContent value="contacts" className="space-y-4">
+                <LazyTabContent isActive={activeTab === 'contacts'}>
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm">Contact Information</CardTitle>
@@ -637,11 +659,13 @@ export function ResizableLeadDetailDrawer({
                         <p className="text-xs mt-1">Owner identification signals detected but contact details not extracted</p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                   </CardContent>
+                 </Card>
+                 </LazyTabContent>
+               </TabsContent>
 
               <TabsContent value="insights" className="space-y-4">
+                <LazyTabContent isActive={activeTab === 'insights'}>
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -717,11 +741,13 @@ export function ResizableLeadDetailDrawer({
                         <p className="text-sm">Generate AI insights to get detailed analysis and recommendations for this lead.</p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                   </CardContent>
+                 </Card>
+                 </LazyTabContent>
+               </TabsContent>
 
               <TabsContent value="evidence" className="space-y-4">
+                <LazyTabContent isActive={activeTab === 'evidence'}>
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm">Evidence Hub</CardTitle>
@@ -731,11 +757,13 @@ export function ResizableLeadDetailDrawer({
                       <SearchIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p className="text-sm">Evidence tracking system coming soon.</p>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    </CardContent>
+                  </Card>
+                  </LazyTabContent>
+                </TabsContent>
 
               <TabsContent value="notes" className="space-y-4">
+                <LazyTabContent isActive={activeTab === 'notes'}>
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm">Add Note</CardTitle>
@@ -773,8 +801,9 @@ export function ResizableLeadDetailDrawer({
                       </div>
                     </CardContent>
                   </Card>
-                )}
-              </TabsContent>
+                 )}
+                 </LazyTabContent>
+               </TabsContent>
             </Tabs>
           </div>
         </div>
