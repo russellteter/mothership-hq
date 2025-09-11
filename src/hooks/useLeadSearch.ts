@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, LeadQuery, ParseResult, SearchJob } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
+import { generateSearchName, generateSearchTags, categorizeLeadType } from './useSearchNaming';
 
 export function useLeadSearch() {
   const [isSearching, setIsSearching] = useState(false);
@@ -24,7 +25,7 @@ export function useLeadSearch() {
     }
   };
 
-  const searchLeads = useCallback(async (dsl: LeadQuery): Promise<void> => {
+  const searchLeads = useCallback(async (dsl: LeadQuery, originalPrompt?: string): Promise<void> => {
     // Cancel any existing search
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -58,9 +59,20 @@ export function useLeadSearch() {
         return;
       }
       
-      // Start the search job with auth token
+      // Generate enhanced search metadata
+      const searchName = generateSearchName(dsl, originalPrompt);
+      const searchTags = generateSearchTags(dsl);
+      const leadType = categorizeLeadType(dsl);
+      
+      // Start the search job with auth token and metadata
       const { data, error } = await supabase.functions.invoke('search-leads', {
-        body: { dsl },
+        body: { 
+          dsl,
+          original_prompt: originalPrompt,
+          custom_name: searchName,
+          search_tags: searchTags,
+          lead_type: leadType
+        },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -73,7 +85,10 @@ export function useLeadSearch() {
         id: jobId, 
         dsl_json: dsl, 
         created_at: new Date().toISOString(),
-        status: 'running' 
+        status: 'running',
+        custom_name: searchName,
+        original_prompt: originalPrompt,
+        search_tags: searchTags
       });
 
       // Poll for results

@@ -340,30 +340,39 @@ export type Database = {
       search_jobs: {
         Row: {
           created_at: string
+          custom_name: string | null
           deleted_at: string | null
           dsl_json: Json
           error_text: string | null
           id: string
+          original_prompt: string | null
+          search_tags: Json | null
           status: string
           summary_stats: Json | null
           user_id: string | null
         }
         Insert: {
           created_at?: string
+          custom_name?: string | null
           deleted_at?: string | null
           dsl_json: Json
           error_text?: string | null
           id?: string
+          original_prompt?: string | null
+          search_tags?: Json | null
           status?: string
           summary_stats?: Json | null
           user_id?: string | null
         }
         Update: {
           created_at?: string
+          custom_name?: string | null
           deleted_at?: string | null
           dsl_json?: Json
           error_text?: string | null
           id?: string
+          original_prompt?: string | null
+          search_tags?: Json | null
           status?: string
           summary_stats?: Json | null
           user_id?: string | null

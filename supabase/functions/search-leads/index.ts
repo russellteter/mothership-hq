@@ -459,17 +459,32 @@ serve(async (req) => {
       );
     }
 
-    const { dsl }: { dsl: LeadQuery } = await req.json();
+    const { 
+      dsl, 
+      original_prompt, 
+      custom_name, 
+      search_tags, 
+      lead_type 
+    }: { 
+      dsl: LeadQuery; 
+      original_prompt?: string; 
+      custom_name?: string; 
+      search_tags?: string[]; 
+      lead_type?: string; 
+    } = await req.json();
     
     console.log('Starting search with DSL:', dsl);
     
-    // Create search job with user_id
+    // Create search job with user_id and metadata
     const { data: searchJob, error: jobError } = await supabase
       .from('search_jobs')
       .insert({
         dsl_json: dsl,
         status: 'running',
-        user_id: user.id
+        user_id: user.id,
+        original_prompt,
+        custom_name,
+        search_tags: search_tags || []
       })
       .select()
       .single();

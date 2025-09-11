@@ -140,6 +140,9 @@ export interface SearchJob {
     processing_time_ms: number;
   };
   error_text?: string;
+  custom_name?: string;
+  original_prompt?: string;
+  search_tags?: string[];
 }
 
 export interface ParseResult {

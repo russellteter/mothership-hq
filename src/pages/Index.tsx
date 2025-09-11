@@ -88,8 +88,8 @@ const Index = () => {
         });
       }
 
-      // Start the search
-      await searchLeads(parseResult.dsl);
+      // Start the search with original prompt for context
+      await searchLeads(parseResult.dsl, prompt);
       
       // Switch to table view to see results
       setActiveView('table');
@@ -359,6 +359,14 @@ const Index = () => {
                   selectedLead={selectedLead}
                   onLeadSelect={handleLeadSelect}
                   isLoading={isSearching}
+                  searchJob={currentSearchJob}
+                  onSaveSearch={(customName) => {
+                    // TODO: Implement save search functionality
+                    console.log('Save search with custom name:', customName);
+                  }}
+                  onEditSearch={() => {
+                    setShowSearchPanel(true);
+                  }}
                 />
               ) : (
                 <BoardView

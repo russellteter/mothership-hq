@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ExternalLink, Eye, Star, Phone, Globe, MapPin } from 'lucide-react';
-import { Lead } from '@/types/lead';
+import { Lead, SearchJob } from '@/types/lead';
+import { SearchContext } from './SearchContext';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -14,6 +15,9 @@ interface LeadsTableProps {
   isLoading: boolean;
   selectedLeads?: string[];
   onSelectionChange?: (leadIds: string[]) => void;
+  searchJob?: SearchJob | null;
+  onSaveSearch?: (customName: string) => void;
+  onEditSearch?: () => void;
 }
 
 export function LeadsTable({ 
@@ -22,7 +26,10 @@ export function LeadsTable({
   onLeadSelect, 
   isLoading, 
   selectedLeads = [], 
-  onSelectionChange 
+  onSelectionChange,
+  searchJob,
+  onSaveSearch,
+  onEditSearch
 }: LeadsTableProps) {
   const handleRowClick = useCallback((lead: Lead) => {
     onLeadSelect(lead);
@@ -109,9 +116,17 @@ export function LeadsTable({
 
   return (
     <div className="flex-1 flex flex-col">
+      {/* Search Context */}
+      <SearchContext 
+        searchJob={searchJob}
+        resultsCount={leads.length}
+        onSaveSearch={onSaveSearch}
+        onEditSearch={onEditSearch}
+      />
+      
       <Card className="h-full flex flex-col">
         <div className="p-3 border-b border-border flex-shrink-0">
-          <h2 className="text-base font-semibold">Search Results ({leads.length} leads)</h2>
+          <h2 className="text-base font-semibold">Lead Details ({leads.length} leads)</h2>
         </div>
         <div className="flex-1 overflow-auto">
           <Table>
