@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,14 +11,10 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Initialize light theme on first load
-  useEffect(() => {
-    document.documentElement.classList.add('light');
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <div className="fixed top-2 left-2 h-4 w-4 rounded-full bg-red-500" />
         <Toaster />
         <Sonner />
         <BrowserRouter>
