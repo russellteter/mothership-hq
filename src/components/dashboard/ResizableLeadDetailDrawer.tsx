@@ -324,12 +324,32 @@ export function ResizableLeadDetailDrawer({
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
-                {/* Score Breakdown */}
+                {/* Enhanced Score Breakdown */}
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Score Breakdown</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm">Score Breakdown</CardTitle>
+                      <Badge variant={lead.score >= 80 ? "default" : lead.score >= 60 ? "secondary" : "outline"}>
+                        {lead.score >= 80 ? "High Priority" : lead.score >= 60 ? "Medium Priority" : "Low Priority"}
+                      </Badge>
+                    </div>
                   </CardHeader>
                   <CardContent>
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Overall Score</span>
+                        <span className={`text-2xl font-bold ${getScoreColor(lead.score)}`}>
+                          {lead.score}/100
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-500 ease-out"
+                          style={{ width: `${lead.score}%` }}
+                        />
+                      </div>
+                    </div>
+                    <Separator className="my-3" />
                     <Table>
                       <TableBody>
                         <TableRow>
@@ -361,10 +381,17 @@ export function ResizableLeadDetailDrawer({
                   </CardContent>
                 </Card>
 
-                {/* Basic Info */}
+                {/* Enhanced Business Info */}
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Business Information</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm">Business Information</CardTitle>
+                      {lead.business.categories && lead.business.categories.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {lead.business.categories[0]}
+                        </Badge>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -407,7 +434,48 @@ export function ResizableLeadDetailDrawer({
                                 Reviews
                               </div>
                             </TableCell>
-                            <TableCell className="py-2">{lead.review_count} reviews</TableCell>
+                            <TableCell className="py-2">
+                              <div className="flex items-center gap-2">
+                                <span>{lead.review_count} reviews</span>
+                                {lead.rating && (
+                                  <>
+                                    <span className="text-muted-foreground">•</span>
+                                    <div className="flex items-center gap-1">
+                                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                                      <span className="text-sm">{lead.rating}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {lead.owner && (
+                          <TableRow>
+                            <TableCell className="font-medium py-2">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-muted-foreground" />
+                                Owner
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-2">{lead.owner}</TableCell>
+                          </TableRow>
+                        )}
+                        {lead.business.hours_json && (
+                          <TableRow>
+                            <TableCell className="font-medium py-2">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                                Hours
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <span className="text-sm">
+                                {typeof lead.business.hours_json === 'string' 
+                                  ? lead.business.hours_json 
+                                  : 'Available'}
+                              </span>
+                            </TableCell>
                           </TableRow>
                         )}
                       </TableBody>
