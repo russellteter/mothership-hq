@@ -1,9 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { SearchSuggestions } from './SearchSuggestions';
 
@@ -21,7 +20,6 @@ const PROMPT_EXAMPLES = [
 
 export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
   const [prompt, setPrompt] = useState('');
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -62,26 +60,26 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
               Describe your ideal leads
             </label>
             <div className="relative">
-              <Input
+              <Textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g., dentists in Columbia, SC with no chat widget"
-                className="pr-8 h-8 text-sm"
+                placeholder="e.g., dentists in Columbia, SC with no chat widget and owner identified"
+                className="min-h-[80px] text-sm resize-none"
                 disabled={isSearching || isSubmitting}
               />
-              <Search className="absolute right-2 top-2 w-3 h-3 text-muted-foreground" />
+              <Search className="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
             </div>
           </div>
           
           <Button 
             type="submit" 
             disabled={!debouncedPrompt.trim() || isSearching || isSubmitting}
-            className="w-full h-8 text-sm"
+            className="w-full h-10 text-sm font-medium"
             variant="default"
           >
             {isSearching || isSubmitting ? 'Searching...' : 'Find Leads'}
@@ -114,71 +112,65 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
           isVisible={showSuggestions && prompt.length > 10}
         />
 
-        <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between">
-              Advanced Options
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 mt-4">
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Industry</label>
-                <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
-                  <option value="">Auto-detect from prompt</option>
-                  <option value="dentist">Dentist</option>
-                  <option value="law_firm">Law Firm</option>
-                  <option value="contractor">Contractor</option>
-                  <option value="hvac">HVAC</option>
-                  <option value="roofing">Roofing</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Search Radius</label>
-                <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
-                  <option value="20">20 km</option>
-                  <option value="40" selected>40 km</option>
-                  <option value="80">80 km</option>
-                  <option value="100">100 km</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Result Limit</label>
-                <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
-                  <option value="50">50 leads</option>
-                  <option value="100">100 leads</option>
-                  <option value="250" selected>250 leads</option>
-                  <option value="500">500 leads</option>
-                </select>
-              </div>
-              
-              <div className="pt-2 border-t border-border">
-                <label className="text-xs font-medium text-muted-foreground">Constraints</label>
-                <div className="mt-2 space-y-2">
-                  <label className="flex items-center space-x-2 text-sm">
-                    <input type="checkbox" className="rounded border-border" />
-                    <span>Must have website</span>
-                  </label>
-                  <label className="flex items-center space-x-2 text-sm">
-                    <input type="checkbox" className="rounded border-border" />
-                    <span>Owner identified</span>
-                  </label>
-                  <label className="flex items-center space-x-2 text-sm">
-                    <input type="checkbox" className="rounded border-border" />
-                    <span>Has online booking</span>
-                  </label>
-                  <label className="flex items-center space-x-2 text-sm">
-                    <input type="checkbox" className="rounded border-border" />
-                    <span>Exclude franchises</span>
-                  </label>
-                </div>
+        {/* Advanced Options - Always Visible */}
+        <div className="space-y-4 border-t border-border pt-4">
+          <h3 className="text-sm font-medium text-foreground">Advanced Options</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Industry</label>
+              <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
+                <option value="">Auto-detect from prompt</option>
+                <option value="dentist">Dentist</option>
+                <option value="law_firm">Law Firm</option>
+                <option value="contractor">Contractor</option>
+                <option value="hvac">HVAC</option>
+                <option value="roofing">Roofing</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Search Radius</label>
+              <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
+                <option value="20">20 km</option>
+                <option value="40" defaultValue="40">40 km</option>
+                <option value="80">80 km</option>
+                <option value="100">100 km</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Result Limit</label>
+              <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
+                <option value="50">50 leads</option>
+                <option value="100">100 leads</option>
+                <option value="250" defaultValue="250">250 leads</option>
+                <option value="500">500 leads</option>
+              </select>
+            </div>
+            
+            <div className="pt-2 border-t border-border">
+              <label className="text-xs font-medium text-muted-foreground">Constraints</label>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input type="checkbox" className="rounded border-border" />
+                  <span>Must have website</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input type="checkbox" className="rounded border-border" />
+                  <span>Owner identified</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input type="checkbox" className="rounded border-border" />
+                  <span>Has online booking</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input type="checkbox" className="rounded border-border" />
+                  <span>Exclude franchises</span>
+                </label>
               </div>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        </div>
       </div>
     </div>
   );

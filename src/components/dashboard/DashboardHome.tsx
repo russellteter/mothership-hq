@@ -224,19 +224,12 @@ export function DashboardHome({ onViewSearch, onStartNewSearch, onRunSearch }: D
         </Card>
       </div>
 
-      {/* Analytics Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <SearchAnalytics />
-        <LeadQualityTracker />
-      </div>
 
       {/* Recent Activity */}
       <Tabs defaultValue="searches" className="w-full">
         <TabsList>
           <TabsTrigger value="searches">Recent Searches</TabsTrigger>
           <TabsTrigger value="saved">Saved Searches</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="quality">Quality Metrics</TabsTrigger>
           <TabsTrigger value="activity">Lead Activity</TabsTrigger>
         </TabsList>
 
@@ -304,14 +297,6 @@ export function DashboardHome({ onViewSearch, onStartNewSearch, onRunSearch }: D
 
         <TabsContent value="saved" className="space-y-4">
           <SavedSearchesTable onRunSearch={onRunSearch} />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <SearchAnalytics />
-        </TabsContent>
-
-        <TabsContent value="quality" className="space-y-4">
-          <LeadQualityTracker />
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-4">

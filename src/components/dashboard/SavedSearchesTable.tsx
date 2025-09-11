@@ -115,7 +115,7 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
   const handleDeleteSearch = async (searchId: string) => {
     try {
       const { error } = await supabase
-        .from('search_jobs')
+        .from('saved_searches')
         .delete()
         .eq('id', searchId)
         .eq('user_id', user?.id);
@@ -146,7 +146,7 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
   const handleBulkDelete = async () => {
     try {
       const { error } = await supabase
-        .from('search_jobs')
+        .from('saved_searches')
         .delete()
         .in('id', Array.from(selectedItems))
         .eq('user_id', user?.id);

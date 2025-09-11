@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
 import { ResizableLeadDetailDrawer } from '@/components/dashboard/ResizableLeadDetailDrawer';
@@ -239,10 +240,13 @@ const Index = () => {
               <h1 className="text-2xl font-semibold tracking-tight">SMB Lead Finder</h1>
               <p className="text-sm text-muted-foreground mt-1">Welcome back, {user?.email}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
