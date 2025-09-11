@@ -14,6 +14,7 @@ const corsHeaders = {
 };
 
 // Mapping for business verticals to Google Places types
+// Note: Only using Google Places API supported types
 const verticalToPlaceTypes: Record<string, string[]> = {
   dentist: ['dentist'],
   law_firm: ['lawyer'],
@@ -100,8 +101,10 @@ async function searchGooglePlaces(query: string, location: string, includedTypes
     return [];
   }
   
+  // Use the new Places API (New) with nearbySearch
   const searchUrl = 'https://places.googleapis.com/v1/places:searchNearby';
   
+  // Parse location to get coordinates (simplified for now)
   const coords = await geocodeLocation(location);
   if (!coords) {
     console.error('Failed to geocode location:', location);
@@ -124,6 +127,7 @@ async function searchGooglePlaces(query: string, location: string, includedTypes
   };
   
   console.log(`Searching Places API for types: ${includedTypes.join(', ')} near ${location}`);
+  console.log('Request body:', JSON.stringify(requestBody, null, 2));
   
   const response = await fetch(searchUrl, {
     method: 'POST',
@@ -147,6 +151,10 @@ async function searchGooglePlaces(query: string, location: string, includedTypes
   }
   
   console.log(`Places API returned ${data.places?.length || 0} results`);
+  if (data.places?.length > 0) {
+    console.log('Sample place result:', JSON.stringify(data.places[0], null, 2));
+  }
+  
   return data.places || [];
 }
 
@@ -162,18 +170,46 @@ async function geocodeLocation(location: string): Promise<{lat: number, lng: num
     const response = await fetch(geocodeUrl);
     const data = await response.json();
     
+    console.log('Geocoding response status:', data.status);
+    console.log('Geocoding response:', JSON.stringify(data, null, 2));
+    
     if (data.status === 'OK' && data.results.length > 0) {
       const location = data.results[0].geometry.location;
-      console.log(`Geocoded to lat: ${location.lat}, lng: ${location.lng}`);
+      console.log(`Geocoded ${location} to lat: ${location.lat}, lng: ${location.lng}`);
       return { lat: location.lat, lng: location.lng };
     } else {
-      console.error('Geocoding failed:', data.status);
+      console.error('Geocoding failed:', {
+        status: data.status,
+        error_message: data.error_message,
+        results_count: data.results?.length || 0
+      });
       return null;
     }
   } catch (error) {
     console.error('Geocoding error:', error);
     return null;
   }
+}
+
+async function getPlaceDetails(placeId: string): Promise<any> {
+  // Use the new Places API (New) for place details
+  const detailsUrl = `https://places.googleapis.com/v1/places/${placeId}`;
+  
+  const response = await fetch(detailsUrl, {
+    method: 'GET',
+    headers: {
+      'X-Goog-Api-Key': googlePlacesApiKey,
+      'X-Goog-FieldMask': 'id,displayName,formattedAddress,internationalPhoneNumber,websiteUri,location,businessStatus,priceLevel,rating,userRatingCount,types'
+    }
+  });
+  
+  if (!response.ok) {
+    console.error('Google Places Details API error:', await response.text());
+    return null;
+  }
+  
+  const data = await response.json();
+  return data;
 }
 
 async function analyzeWebsite(url: string): Promise<{ signals: Signal[], people: any[] }> {
@@ -233,23 +269,26 @@ async function analyzeWebsite(url: string): Promise<{ signals: Signal[], people:
       source_key: 'http_fetch'
     });
     
-    // Simple owner identification
+    // Enhanced owner identification and contact extraction
     const ownerMatch = ownerPatterns.some(pattern => lowerHtml.includes(pattern));
-    signals.push({
-      business_id: '',
-      type: 'owner_identified',
-      value_json: ownerMatch,
-      confidence: 0.7,
-      evidence_url: url,
-      evidence_snippet: ownerMatch ? 
-        `Found owner pattern: ${ownerPatterns.find(p => lowerHtml.includes(p))}` : 
-        'No owner patterns found',
-      source_key: 'http_fetch'
-    });
+    if (ownerMatch) {
+      signals.push({
+        business_id: '',
+        type: 'owner_identified',
+        value_json: true,
+        confidence: 0.7,
+        evidence_url: url,
+        evidence_snippet: `Found owner pattern: ${ownerPatterns.find(p => lowerHtml.includes(p))}`,
+        source_key: 'http_fetch'
+      });
+    }
+    
+    // Extract owner contact information
+    const extractedContacts = extractOwnerContacts(html, url);
+    people.push(...extractedContacts);
     
   } catch (error) {
     console.error('Website analysis error:', error);
-    // Return basic signals even on error
     signals.push({
       business_id: '',
       type: 'no_website',
@@ -259,39 +298,92 @@ async function analyzeWebsite(url: string): Promise<{ signals: Signal[], people:
       evidence_snippet: `Website analysis failed: ${error.message}`,
       source_key: 'http_fetch'
     });
-    
-    signals.push({
-      business_id: '',
-      type: 'has_chatbot',
-      value_json: false,
-      confidence: 0.5,
-      evidence_url: url,
-      evidence_snippet: 'Could not analyze for chatbot due to error',
-      source_key: 'http_fetch'
-    });
-    
-    signals.push({
-      business_id: '',
-      type: 'has_online_booking',
-      value_json: false,
-      confidence: 0.5,
-      evidence_url: url,
-      evidence_snippet: 'Could not analyze for booking due to error',
-      source_key: 'http_fetch'
-    });
-    
-    signals.push({
-      business_id: '',
-      type: 'owner_identified',
-      value_json: false,
-      confidence: 0.5,
-      evidence_url: url,
-      evidence_snippet: 'Could not analyze for owner due to error',
-      source_key: 'http_fetch'
-    });
   }
   
   return { signals, people };
+}
+
+function extractOwnerContacts(html: string, baseUrl: string): any[] {
+  const contacts: any[] = [];
+  const lowerHtml = html.toLowerCase();
+  
+  try {
+    // Email patterns
+    const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    const emails = html.match(emailRegex) || [];
+    
+    // Phone patterns
+    const phoneRegex = /(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g;
+    const phones = html.match(phoneRegex) || [];
+    
+    // LinkedIn URL patterns
+    const linkedinRegex = /(https?:\/\/(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+)/g;
+    const linkedinUrls = html.match(linkedinRegex) || [];
+    
+    // Name extraction patterns around owner keywords
+    const ownerSections = [
+      /about\s+us[\s\S]{0,500}/gi,
+      /meet\s+(?:the\s+)?(?:team|doctor|owner)[\s\S]{0,500}/gi,
+      /our\s+team[\s\S]{0,500}/gi,
+      /leadership[\s\S]{0,500}/gi,
+      /(?:dr\.?\s+|doctor\s+)([a-z\s]{2,30})/gi,
+      /(?:owner|principal|founder)[:\s]+([a-z\s]{2,30})/gi
+    ];
+    
+    const extractedNames: string[] = [];
+    ownerSections.forEach(pattern => {
+      const matches = html.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          // Extract names from common patterns
+          const namePatterns = [
+            /(?:dr\.?\s+|doctor\s+)([a-z\s]{2,30})/gi,
+            /(?:owner|principal|founder)[:\s]+([a-z\s]{2,30})/gi,
+            /<h[1-6][^>]*>([^<]*(?:dr\.?|owner|principal)[^<]*)<\/h[1-6]>/gi
+          ];
+          
+          namePatterns.forEach(namePattern => {
+            const nameMatches = match.match(namePattern);
+            if (nameMatches) {
+              nameMatches.forEach(nameMatch => {
+                const cleanName = nameMatch.replace(/(?:dr\.?|owner|principal|founder)[:\s]*/gi, '').trim();
+                if (cleanName.length > 2 && cleanName.length < 50 && /^[a-zA-Z\s.]+$/.test(cleanName)) {
+                  extractedNames.push(cleanName);
+                }
+              });
+            }
+          });
+        });
+      }
+    });
+    
+    // Combine extracted information
+    if (extractedNames.length > 0 || emails.length > 0 || phones.length > 0 || linkedinUrls.length > 0) {
+      const ownerName = extractedNames[0] || 'Owner';
+      const ownerEmail = emails.find(email => 
+        !email.includes('info@') && 
+        !email.includes('contact@') && 
+        !email.includes('admin@') &&
+        !email.includes('support@')
+      ) || emails[0];
+      const ownerPhone = phones[0];
+      const linkedinUrl = linkedinUrls[0];
+      
+      contacts.push({
+        name: ownerName,
+        role: extractedNames[0] && extractedNames[0].toLowerCase().includes('dr') ? 'Doctor/Owner' : 'Owner',
+        email: ownerEmail,
+        phone: ownerPhone,
+        source_url: linkedinUrl || baseUrl,
+        confidence: 0.7
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error extracting owner contacts:', error);
+  }
+  
+  return contacts;
 }
 
 function calculateScore(signals: Signal[], constraints: any): { score: number; subscores: any } {
@@ -342,40 +434,15 @@ function calculateScore(signals: Signal[], constraints: any): { score: number; s
 }
 
 serve(async (req) => {
-  console.log('=== Search Function Started ===');
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Processing search request...');
-
-    // Step 1: Parse request body
-    let requestBody;
-    try {
-      const rawBody = await req.text();
-      console.log('Raw request body length:', rawBody.length);
-      requestBody = JSON.parse(rawBody);
-    } catch (parseError) {
-      console.error('Request body parsing error:', parseError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid JSON in request body',
-          details: parseError.message 
-        }), 
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Step 2: Authentication
-    console.log('=== Authentication Step ===');
+    // Get user from auth header
     const authHeader = req.headers.get('authorization');
-    
     if (!authHeader) {
-      console.error('Missing authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }), 
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -383,327 +450,210 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    console.log('Token extracted, length:', token.length);
-
-    let user;
-    try {
-      const { data: userData, error: authError } = await supabase.auth.getUser(token);
-      user = userData?.user;
-      
-      if (authError || !user) {
-        console.error('Authentication failed:', authError?.message || 'No user found');
-        return new Response(
-          JSON.stringify({ 
-            error: 'Authentication failed',
-            details: authError?.message || 'Invalid token'
-          }), 
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      console.log('User authenticated successfully:', user.id);
-    } catch (authException) {
-      console.error('Authentication exception:', authException);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Authentication system error',
-          details: authException.message 
-        }), 
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Invalid or expired token' }), 
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Step 3: Extract and validate parameters
-    console.log('=== Parameter Extraction ===');
-    const dsl = requestBody?.dsl;
-    const original_prompt = requestBody?.original_prompt || '';
-    const custom_name = requestBody?.custom_name || '';
-    const search_tags = requestBody?.search_tags || [];
+    const { 
+      dsl, 
+      original_prompt, 
+      custom_name, 
+      search_tags, 
+      lead_type 
+    }: { 
+      dsl: LeadQuery; 
+      original_prompt?: string; 
+      custom_name?: string; 
+      search_tags?: string[]; 
+      lead_type?: string; 
+    } = await req.json();
     
-    if (!dsl) {
-      console.error('Missing DSL in request body');
-      return new Response(
-        JSON.stringify({ error: 'Missing DSL parameter' }), 
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    console.log('Starting search with DSL:', dsl);
+    
+    // Create search job with user_id and metadata
+    const { data: searchJob, error: jobError } = await supabase
+      .from('search_jobs')
+      .insert({
+        dsl_json: dsl,
+        status: 'running',
+        user_id: user.id,
+        original_prompt,
+        custom_name,
+        search_tags: search_tags || []
+      })
+      .select()
+      .single();
+    
+    if (jobError) {
+      throw new Error(`Failed to create search job: ${jobError.message}`);
     }
     
-    console.log('Starting search with DSL:', JSON.stringify(dsl, null, 2));
+    console.log('Created search job:', searchJob.id);
     
-    // Step 4: Create search job
-    console.log('=== Creating Search Job ===');
-    let searchJob;
-    try {
-      const { data: jobData, error: jobError } = await supabase
-        .from('search_jobs')
-        .insert({
-          dsl_json: dsl,
-          status: 'running',
-          user_id: user.id,
-          original_prompt: original_prompt || null,
-          custom_name: custom_name || null,
-          search_tags: search_tags.length > 0 ? search_tags : null
-        })
-        .select()
-        .single();
-      
-      if (jobError) {
-        console.error('Search job creation error:', jobError);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to create search job',
-            details: jobError.message 
-          }), 
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      searchJob = jobData;
-      console.log('Created search job:', searchJob.id);
-    } catch (dbException) {
-      console.error('Database exception:', dbException);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Database error during job creation',
-          details: dbException.message 
-        }), 
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Step 5: Google Places Search
-    console.log('=== Google Places Search ===');
+    // Build search query
     const location = `${dsl.geo.city}, ${dsl.geo.state}`;
     const businessTypes = verticalToPlaceTypes[dsl.vertical] || ['establishment'];
     const searchQuery = `${businessTypes[0]} in ${location}`;
     
-    console.log('Search parameters:', {
-      location,
-      businessTypes,
-      searchQuery,
-      vertical: dsl.vertical
-    });
+    // Search Google Places
+    const places = await searchGooglePlaces(searchQuery, location, businessTypes);
+    console.log(`Found ${places.length} places`);
     
-    // Check Google Places API key
-    if (!googlePlacesApiKey) {
-      console.error('Google Places API key not configured');
-      await supabase
-        .from('search_jobs')
-        .update({ status: 'failed', error_text: 'Google Places API key not configured' })
-        .eq('id', searchJob.id);
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'Google Places API not configured',
-          jobId: searchJob.id 
-        }), 
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    let places = [];
-    try {
-      places = await searchGooglePlaces(searchQuery, location, businessTypes);
-      console.log(`Found ${places.length} places from Google Places API`);
-      
-      if (places.length === 0) {
-        console.log('No places found, but continuing with empty results');
-      }
-    } catch (placesError) {
-      console.error('Google Places API error:', placesError);
-      await supabase
-        .from('search_jobs')
-        .update({ 
-          status: 'failed', 
-          error_text: `Google Places API error: ${placesError.message}` 
-        })
-        .eq('id', searchJob.id);
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'Google Places API failed',
-          details: placesError.message,
-          jobId: searchJob.id 
-        }), 
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Step 6: Process businesses
-    console.log('=== Processing Businesses ===');
     const processedBusinesses: Business[] = [];
-    let processedCount = 0;
-    const maxBusinesses = Math.min(50, dsl.result_size?.target || 50);
     
-    for (const place of places.slice(0, maxBusinesses)) {
+    // Process each place
+    for (const place of places.slice(0, Math.min(50, dsl.result_size.target))) {
       try {
-        processedCount++;
-        console.log(`Processing business ${processedCount}/${maxBusinesses}:`, place.displayName?.text || place.displayName);
+        // Get detailed place information - place already has details from new API
+        const details = place;
+        if (!details) continue;
         
-        if (!place || !place.displayName) {
-          console.log('Skipping invalid place data');
-          continue;
-        }
-        
-        // Parse address from new API format with safety checks
-        const formattedAddress = place.formattedAddress || '';
-        const addressParts = formattedAddress.split(', ');
-        const state = addressParts.length >= 2 ? addressParts[addressParts.length - 2]?.split(' ')[0] || '' : '';
-        const city = addressParts.length >= 3 ? addressParts[addressParts.length - 3] || '' : '';
-        const street = addressParts[0] || '';
-        const zip = addressParts.length >= 2 ? addressParts[addressParts.length - 2]?.split(' ')[1] || '' : '';
+        // Parse address from new API format
+        const addressParts = details.formattedAddress?.split(', ') || [];
+        const state = addressParts[addressParts.length - 2]?.split(' ')[0] || '';
+        const city = addressParts[addressParts.length - 3] || '';
         
         const business: Business = {
           id: crypto.randomUUID(),
-          name: place.displayName?.text || place.displayName || 'Unknown Business',
+          name: details.displayName?.text || details.displayName,
           vertical: dsl.vertical,
-          website: place.websiteUri || null,
-          phone: place.internationalPhoneNumber || null,
+          website: details.websiteUri,
+          phone: details.internationalPhoneNumber,
           address_json: {
-            street,
-            city,
-            state,
-            zip,
+            street: addressParts[0] || '',
+            city: city,
+            state: state,
+            zip: addressParts[addressParts.length - 2]?.split(' ')[1] || '',
             country: 'US'
           },
-          lat: place.location?.latitude || null,
-          lng: place.location?.longitude || null,
-          franchise_bool: false,
-          google_place_id: place.id || null
+          lat: details.location?.latitude,
+          lng: details.location?.longitude,
+          franchise_bool: false
         };
         
-        // Insert business with error handling
-        let insertedBusiness;
-        try {
-          const { data: businessData, error: businessError } = await supabase
-            .from('businesses')
-            .insert(business)
-            .select()
-            .single();
-          
-          if (businessError) {
-            console.error('Failed to insert business:', {
-              business_name: business.name,
-              error: businessError.message
-            });
-            continue;
-          }
-          
-          insertedBusiness = businessData;
-          console.log('Successfully inserted business:', insertedBusiness.name);
-        } catch (businessException) {
-          console.error('Business insertion exception:', {
+        console.log('Inserting business:', business.name);
+        
+        // Insert business
+        const { data: insertedBusiness, error: businessError } = await supabase
+          .from('businesses')
+          .insert(business)
+          .select()
+          .single();
+        
+        if (businessError) {
+          console.error('Failed to insert business:', {
             business_name: business.name,
-            exception: businessException.message
+            error: businessError,
+            error_code: businessError.code,
+            error_message: businessError.message,
+            error_details: businessError.details
           });
           continue;
         }
         
-        // Step 7: Analyze website and determine signals
+        console.log('Inserted business:', insertedBusiness.name);
+        
+        // Analyze website and determine signals
         const signals: Signal[] = [];
         
         if (business.website) {
-          try {
-            console.log('Analyzing website:', business.website);
-            const { signals: websiteSignals } = await analyzeWebsite(business.website);
-            signals.push(...websiteSignals.map(s => ({ ...s, business_id: insertedBusiness.id })));
-            console.log(`Generated ${websiteSignals.length} signals from website analysis`);
-          } catch (websiteError) {
-            console.error('Website analysis failed:', {
-              business: business.name,
-              website: business.website,
-              error: websiteError.message
-            });
-            // Add basic signals indicating analysis failure
-            signals.push({
-              business_id: insertedBusiness.id,
-              type: 'no_website',
-              value_json: true,
-              confidence: 0.5,
-              evidence_url: business.website,
-              evidence_snippet: `Analysis failed: ${websiteError.message}`,
-              source_key: 'http_fetch'
-            });
+          const { signals: websiteSignals, people: extractedPeople } = await analyzeWebsite(business.website);
+          signals.push(...websiteSignals.map(s => ({ ...s, business_id: insertedBusiness.id })));
+          
+          // Insert extracted people into database
+          for (const person of extractedPeople) {
+            try {
+              const { data: insertedPerson, error: personError } = await supabase
+                .from('people')
+                .insert({
+                  business_id: insertedBusiness.id,
+                  name: person.name,
+                  role: person.role,
+                  email: person.email,
+                  phone: person.phone,
+                  source_url: person.source_url,
+                  confidence: person.confidence
+                })
+                .select()
+                .single();
+              
+              if (personError) {
+                console.error('Failed to insert person:', personError);
+              } else {
+                console.log('Inserted person:', insertedPerson.name);
+              }
+            } catch (personInsertError) {
+              console.error('Error inserting person:', personInsertError);
+            }
           }
+          
+          // Add website presence signal (since we have a website)
+          signals.push({
+            business_id: insertedBusiness.id,
+            type: 'no_website',
+            value_json: false,
+            confidence: 0.95,
+            evidence_url: business.website,
+            evidence_snippet: 'Website URL found and accessible',
+            source_key: 'google_places'
+          });
         } else {
-          // No website found
-          console.log('No website found for business:', business.name);
           signals.push({
             business_id: insertedBusiness.id,
             type: 'no_website',
             value_json: true,
             confidence: 0.95,
-            evidence_url: `https://maps.google.com/place?place_id=${place.id}`,
+            evidence_url: `https://maps.google.com/place?place_id=${details.id}`,
             evidence_snippet: 'No website listed in Google Places',
             source_key: 'google_places'
           });
         }
         
-        // Add review count signal from Google Places
-        if (place.userRatingCount) {
+        // Add review count signal
+        if (details.userRatingCount) {
           signals.push({
             business_id: insertedBusiness.id,
             type: 'review_count',
-            value_json: place.userRatingCount,
+            value_json: details.userRatingCount,
             confidence: 0.95,
-            evidence_url: `https://maps.google.com/place?place_id=${place.id}`,
-            evidence_snippet: `${place.userRatingCount} reviews on Google`,
+            evidence_url: `https://maps.google.com/place?place_id=${details.id}`,
+            evidence_snippet: `${details.userRatingCount} reviews on Google`,
             source_key: 'google_places'
           });
         }
         
-        // Step 8: Insert all signals
+        // Insert signals
         if (signals.length > 0) {
-          try {
-            const { error: signalError } = await supabase
-              .from('signals')
-              .insert(signals);
-            
-            if (signalError) {
-              console.error('Failed to insert signals:', {
-                business: business.name,
-                signals_count: signals.length,
-                error: signalError.message
-              });
-            } else {
-              console.log(`Successfully inserted ${signals.length} signals for ${insertedBusiness.name}`);
-            }
-          } catch (signalException) {
-            console.error('Signal insertion exception:', {
-              business: business.name,
-              exception: signalException.message
-            });
+          const { error: signalsError } = await supabase
+            .from('signals')
+            .insert(signals);
+          
+          if (signalsError) {
+            console.error('Failed to insert signals:', signalsError);
           }
         }
         
-        // Step 9: Calculate score and create lead view
-        try {
-          const { score, subscores } = calculateScore(signals, dsl.constraints);
-          console.log(`Calculated score ${score} for ${business.name}`);
-          
-          const { error: leadViewError } = await supabase
-            .from('lead_views')
-            .insert({
-              search_job_id: searchJob.id,
-              business_id: insertedBusiness.id,
-              score: score,
-              subscores_json: subscores,
-              rank: processedCount
-            });
-          
-          if (leadViewError) {
-            console.error('Failed to insert lead view:', {
-              business: business.name,
-              error: leadViewError.message
-            });
-          } else {
-            console.log(`Created lead view for ${business.name} with score ${score}`);
-          }
-        } catch (scoringError) {
-          console.error('Scoring error:', {
-            business: business.name,
-            error: scoringError.message
+        // Calculate score
+        const { score, subscores } = calculateScore(signals, dsl.constraints);
+        
+        // Create lead view
+        const { error: leadViewError } = await supabase
+          .from('lead_views')
+          .insert({
+            search_job_id: searchJob.id,
+            business_id: insertedBusiness.id,
+            score: score,
+            subscores_json: subscores,
+            rank: processedBusinesses.length + 1
           });
+        
+        if (leadViewError) {
+          console.error('Failed to insert lead view:', leadViewError);
         }
         
         processedBusinesses.push(insertedBusiness);
@@ -712,34 +662,26 @@ serve(async (req) => {
         await new Promise(resolve => setTimeout(resolve, 100));
         
       } catch (error) {
-        console.error('Error processing place:', {
-          place_name: place.displayName?.text || place.displayName,
-          error: error.message
-        });
+        console.error('Error processing place:', error);
         continue;
       }
     }
     
-    // Step 10: Update search job status
-    console.log('=== Finalizing Search Job ===');
-    try {
-      await supabase
-        .from('search_jobs')
-        .update({
-          status: 'completed',
-          summary_stats: {
-            total_found: places.length,
-            total_enriched: processedBusinesses.length,
-            total_scored: processedBusinesses.length,
-            processing_time_ms: Date.now()
-          }
-        })
-        .eq('id', searchJob.id);
-      
-      console.log(`Search completed successfully. Processed ${processedBusinesses.length} businesses`);
-    } catch (updateError) {
-      console.error('Failed to update search job status:', updateError);
-    }
+    // Update search job status
+    await supabase
+      .from('search_jobs')
+      .update({
+        status: 'completed',
+        summary_stats: {
+          total_found: places.length,
+          total_enriched: processedBusinesses.length,
+          total_scored: processedBusinesses.length,
+          processing_time_ms: Date.now()
+        }
+      })
+      .eq('id', searchJob.id);
+    
+    console.log(`Search completed. Processed ${processedBusinesses.length} businesses`);
     
     return new Response(JSON.stringify({
       job_id: searchJob.id,
@@ -750,18 +692,9 @@ serve(async (req) => {
     });
     
   } catch (error) {
-    console.error('=== CRITICAL ERROR in search-leads function ===');
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
+    console.error('Error in search-leads function:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        details: error.message 
-      }), 
+      JSON.stringify({ error: error.message }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
