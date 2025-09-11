@@ -361,64 +361,6 @@ export function ResizableLeadDetailDrawer({
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
-<<<<<<< HEAD
-                {/* Enhanced Score Breakdown */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">Score Breakdown</CardTitle>
-                      <Badge variant={lead.score >= 80 ? "default" : lead.score >= 60 ? "secondary" : "outline"}>
-                        {lead.score >= 80 ? "High Priority" : lead.score >= 60 ? "Medium Priority" : "Low Priority"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Overall Score</span>
-                        <span className={`text-2xl font-bold ${getScoreColor(lead.score)}`}>
-                          {lead.score}/100
-                        </span>
-                      </div>
-                      <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-500 ease-out"
-                          style={{ width: `${lead.score}%` }}
-                        />
-                      </div>
-                    </div>
-                    <Separator className="my-3" />
-                    <Table>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">ICP Match</TableCell>
-                          <TableCell className="text-right py-2">
-                            {realSubscores?.ICP || Math.round(lead.score * 0.35)}/35
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">Pain Signals</TableCell>
-                          <TableCell className="text-right py-2">
-                            {realSubscores?.Pain || Math.round(lead.score * 0.35)}/35
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">Reachability</TableCell>
-                          <TableCell className="text-right py-2">
-                            {realSubscores?.Reachability || Math.round(lead.score * 0.20)}/20
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium py-2">Compliance Risk</TableCell>
-                          <TableCell className="text-right py-2">
-                            -{realSubscores?.ComplianceRisk || Math.round(lead.score * 0.10)}/10
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-=======
                 <LazyTabContent isActive={activeTab === 'overview'}>
                   {/* Enhanced Score Breakdown */}
                   <Card>
@@ -436,7 +378,6 @@ export function ResizableLeadDetailDrawer({
                       />
                     </CardContent>
                   </Card>
->>>>>>> origin/main
 
                 {/* Enhanced Business Info */}
                 <Card>

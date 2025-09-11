@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-<<<<<<< HEAD
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { 
   Download, 
   LayoutGrid, 
@@ -17,7 +17,8 @@ import {
   FileJson,
   FileSpreadsheet,
   FileText,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,10 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-=======
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Download, LayoutGrid, Table as TableIcon, LogOut, Loader2, Home, Search, Filter, Settings, X } from 'lucide-react';
->>>>>>> origin/main
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { VirtualizedLeadsTable } from '@/components/dashboard/VirtualizedLeadsTable';
