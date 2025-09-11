@@ -12,8 +12,10 @@ import {
   AlertTriangle,
   RotateCcw,
   Save,
-  Settings
+  Settings,
+  RefreshCw
 } from 'lucide-react';
+import { useScoring } from '@/hooks/useScoring';
 
 interface ScoringWeights {
   ICP: number;          // Ideal Customer Profile (location, vertical, size)
@@ -73,38 +75,30 @@ const DEFAULT_PROFILES: ScoringProfile[] = [
 ];
 
 interface LeadScoringProfilesProps {
-  currentProfile: string;
-  onProfileChange: (profileId: string) => void;
-  onWeightsChange: (weights: ScoringWeights) => void;
+  searchJobId?: string;
+  onScoreUpdate?: () => void;
 }
 
 export function LeadScoringProfiles({ 
-  currentProfile, 
-  onProfileChange,
-  onWeightsChange 
+  searchJobId,
+  onScoreUpdate
 }: LeadScoringProfilesProps) {
-  const [profiles] = useState<ScoringProfile[]>(DEFAULT_PROFILES);
+  const {
+    currentProfile,
+    customWeights,
+    isRescoring,
+    profiles,
+    getActiveProfile,
+    updateProfile,
+    updateWeights,
+    rescoreLeads
+  } = useScoring();
+  
   const [isCustomizing, setIsCustomizing] = useState(false);
-  const [customWeights, setCustomWeights] = useState<ScoringWeights>(
-    profiles.find(p => p.id === currentProfile)?.weights || profiles[0].weights
-  );
-
-  React.useEffect(() => {
-    const profile = profiles.find(p => p.id === currentProfile);
-    if (profile) {
-      setCustomWeights(profile.weights);
-    }
-  }, [currentProfile, profiles]);
-
-  const activeProfile = profiles.find(p => p.id === currentProfile) || profiles[0];
+  const activeProfile = getActiveProfile();
 
   const handleProfileSelect = (profileId: string) => {
-    const profile = profiles.find(p => p.id === profileId);
-    if (profile) {
-      onProfileChange(profileId);
-      setCustomWeights(profile.weights);
-      onWeightsChange(profile.weights);
-    }
+    updateProfile(profileId);
   };
 
   const handleWeightChange = (factor: keyof ScoringWeights, value: number) => {
@@ -125,13 +119,20 @@ export function LeadScoringProfiles({
       }
     }
     
-    setCustomWeights(newWeights);
-    onWeightsChange(newWeights);
+    updateWeights(newWeights);
   };
 
   const resetToProfile = () => {
-    setCustomWeights(activeProfile.weights);
-    onWeightsChange(activeProfile.weights);
+    updateWeights(activeProfile.weights);
+  };
+
+  const handleRescoreLeads = async () => {
+    if (!searchJobId) return;
+    
+    const success = await rescoreLeads(searchJobId);
+    if (success && onScoreUpdate) {
+      onScoreUpdate();
+    }
   };
 
   const getWeightColor = (weight: number) => {
@@ -175,6 +176,26 @@ export function LeadScoringProfiles({
               <Settings className="h-4 w-4 mr-1" />
               {isCustomizing ? 'Done' : 'Customize'}
             </Button>
+            {searchJobId && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleRescoreLeads}
+                disabled={isRescoring}
+              >
+                {isRescoring ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                    Re-scoring...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Re-score Leads
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>

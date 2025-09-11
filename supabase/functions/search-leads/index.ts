@@ -386,16 +386,24 @@ function extractOwnerContacts(html: string, baseUrl: string): any[] {
   return contacts;
 }
 
-function calculateScore(signals: Signal[], constraints: any): { score: number; subscores: any } {
+function calculateScore(signals: Signal[], constraints: any, weights?: any): { score: number; subscores: any } {
+  // Default weights if not provided
+  const scoringWeights = weights || {
+    ICP: 35,
+    Pain: 35,
+    Reachability: 20,
+    ComplianceRisk: 10
+  };
+  
   let icpScore = 0;
   let painScore = 0;
   let reachabilityScore = 0;
   let complianceRisk = 0;
   
-  // ICP scoring (35%)
+  // ICP scoring (weighted%)
   icpScore = 25; // Base score for matching vertical/geo
   
-  // Pain scoring (35%) - higher pain = higher score
+  // Pain scoring (weighted%) - higher pain = higher score
   signals.forEach(signal => {
     switch (signal.type) {
       case 'no_website':
@@ -417,18 +425,26 @@ function calculateScore(signals: Signal[], constraints: any): { score: number; s
     }
   });
   
-  // Compliance risk (10% deduction)
+  // Compliance risk (weighted% deduction)
   complianceRisk = 5; // Base risk
   
-  const totalScore = Math.min(100, Math.max(0, icpScore + painScore + reachabilityScore - complianceRisk));
+  // Apply weights to calculate final score
+  const weightedIcpScore = (icpScore * scoringWeights.ICP) / 100;
+  const weightedPainScore = (painScore * scoringWeights.Pain) / 100;
+  const weightedReachabilityScore = (reachabilityScore * scoringWeights.Reachability) / 100;
+  const weightedComplianceRisk = (complianceRisk * scoringWeights.ComplianceRisk) / 100;
+  
+  const totalScore = Math.min(100, Math.max(0, 
+    weightedIcpScore + weightedPainScore + weightedReachabilityScore - weightedComplianceRisk
+  ));
   
   return {
     score: Math.round(totalScore),
     subscores: {
-      ICP: icpScore,
-      Pain: painScore,
-      Reachability: reachabilityScore,
-      ComplianceRisk: complianceRisk
+      ICP: Math.round(weightedIcpScore),
+      Pain: Math.round(weightedPainScore),
+      Reachability: Math.round(weightedReachabilityScore),
+      ComplianceRisk: Math.round(weightedComplianceRisk)
     }
   };
 }
@@ -464,13 +480,15 @@ serve(async (req) => {
       original_prompt, 
       custom_name, 
       search_tags, 
-      lead_type 
+      lead_type,
+      scoring_weights
     }: { 
       dsl: LeadQuery; 
       original_prompt?: string; 
       custom_name?: string; 
       search_tags?: string[]; 
-      lead_type?: string; 
+      lead_type?: string;
+      scoring_weights?: any;
     } = await req.json();
     
     console.log('Starting search with DSL:', dsl);
@@ -638,8 +656,8 @@ serve(async (req) => {
           }
         }
         
-        // Calculate score
-        const { score, subscores } = calculateScore(signals, dsl.constraints);
+        // Calculate score with custom weights if provided
+        const { score, subscores } = calculateScore(signals, dsl.constraints, scoring_weights);
         
         // Create lead view
         const { error: leadViewError } = await supabase

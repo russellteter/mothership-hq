@@ -355,13 +355,12 @@ const Index = () => {
                     onRunSearch={handleRunSavedSearch}
                   />
                   <SavedSearchesTable onRunSearch={handleRunSavedSearch} />
-                  {showScoringSettings && (
+                  {showScoringSettings && currentSearchJob && (
                     <LeadScoringProfiles
-                      currentProfile={currentScoringProfile}
-                      onProfileChange={setCurrentScoringProfile}
-                      onWeightsChange={(weights) => {
-                        // This would trigger re-scoring in a real implementation
-                        console.log('Scoring weights updated:', weights);
+                      searchJobId={currentSearchJob.id}
+                      onScoreUpdate={() => {
+                        // Re-fetch search results to show updated scores
+                        window.location.reload(); // Simple refresh for now
                       }}
                     />
                   )}
