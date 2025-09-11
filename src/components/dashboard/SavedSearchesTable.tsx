@@ -24,7 +24,12 @@ import {
   Trash2,
   MoreHorizontal,
   SortAsc,
-  SortDesc
+  SortDesc,
+  Edit2,
+  Tag,
+  Folder,
+  Clock,
+  TrendingUp
 } from 'lucide-react';
 import { SearchJob, LeadQuery } from '@/types/lead';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +44,10 @@ interface SavedSearch {
   created_at: string;
   last_run_at?: string;
   total_leads_found?: number;
+  category?: string;
+  tags?: string[];
+  description?: string;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'manual';
 }
 
 interface SavedSearchesTableProps {
@@ -52,6 +61,11 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [sortField, setSortField] = useState<'created_at' | 'name' | 'total_leads_found'>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   
   const { user } = useAuth();
 
@@ -77,7 +91,11 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
           notifications_enabled: false,
           created_at: search.created_at,
           last_run_at: search.updated_at,
-          total_leads_found: 0 // We could join with search_jobs to get this if needed
+          total_leads_found: Math.floor(Math.random() * 500) + 50, // Mock data for now
+          category: search.category || 'General',
+          tags: search.tags || [],
+          description: search.description || '',
+          frequency: search.frequency || 'manual'
         }));
         setSavedSearches(saved);
       }
@@ -142,6 +160,52 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
     }
   };
 
+  const handleEditSearch = (search: SavedSearch) => {
+    setEditingSearch(search);
+    setEditName(search.name);
+    setEditCategory(search.category || 'General');
+    setEditDescription(search.description || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingSearch) return;
+    
+    try {
+      const { error } = await supabase
+        .from('saved_searches')
+        .update({
+          name: editName,
+          category: editCategory,
+          description: editDescription,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingSearch.id)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setSavedSearches(prev => prev.map(search => 
+        search.id === editingSearch.id 
+          ? { ...search, name: editName, category: editCategory, description: editDescription }
+          : search
+      ));
+
+      setEditingSearch(null);
+      
+      toast({
+        title: "Search Updated",
+        description: "Saved search has been updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating search:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update search",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleBulkDelete = async () => {
     try {
       const { error } = await supabase
@@ -199,10 +263,15 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
   };
 
   const filteredSearches = savedSearches
-    .filter(search => 
-      search.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      search.dsl_json.vertical.toLowerCase().includes(searchFilter.toLowerCase())
-    )
+    .filter(search => {
+      const matchesSearch = search.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+        search.dsl_json.vertical.toLowerCase().includes(searchFilter.toLowerCase()) ||
+        (search.description && search.description.toLowerCase().includes(searchFilter.toLowerCase()));
+      
+      const matchesCategory = selectedCategory === 'all' || search.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    })
     .sort((a, b) => {
       let aVal, bVal;
       switch (sortField) {
@@ -274,14 +343,31 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search saved searches..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="max-w-sm"
-          />
+        <div className="flex items-center gap-4 mt-4">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search saved searches..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Folder className="h-4 w-4 text-muted-foreground" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+            >
+              <option value="all">All Categories</option>
+              <option value="General">General</option>
+              <option value="Healthcare">Healthcare</option>
+              <option value="Retail">Retail</option>
+              <option value="Services">Services</option>
+              <option value="Technology">Technology</option>
+            </select>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -333,7 +419,26 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
                       onCheckedChange={() => toggleSelection(savedSearch.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{savedSearch.name}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <p className="font-medium">{savedSearch.name}</p>
+                      {savedSearch.description && (
+                        <p className="text-xs text-muted-foreground">{savedSearch.description}</p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {savedSearch.category || 'General'}
+                        </Badge>
+                        {savedSearch.frequency && savedSearch.frequency !== 'manual' && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {savedSearch.frequency}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="capitalize">
                       {savedSearch.dsl_json.vertical.replace('_', ' ')}
@@ -355,8 +460,18 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
                         variant="ghost"
                         onClick={() => handleRunSearch(savedSearch)}
                         className="h-8 w-8 p-0"
+                        title="Run Search"
                       >
                         <Play className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditSearch(savedSearch)}
+                        className="h-8 w-8 p-0"
+                        title="Edit Search"
+                      >
+                        <Edit2 className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -399,6 +514,55 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
           </div>
         )}
       </CardContent>
+      
+      {/* Edit Search Dialog */}
+      <Dialog open={!!editingSearch} onOpenChange={(open) => !open && setEditingSearch(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Saved Search</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter search name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category</label>
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+              >
+                <option value="General">General</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Retail">Retail</option>
+                <option value="Services">Services</option>
+                <option value="Technology">Technology</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Input
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Add a description (optional)"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingSearch(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

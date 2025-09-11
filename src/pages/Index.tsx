@@ -235,7 +235,7 @@ const Index = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const exportToCsv = () => {
+  const exportData = (format: 'csv' | 'json' | 'excel') => {
     const leadsToExport = filteredLeads.length > 0 ? filteredLeads : searchResults;
     
     if (leadsToExport.length === 0) {
@@ -247,33 +247,158 @@ const Index = () => {
       return;
     }
 
-    const csvContent = [
-      ['Rank', 'Name', 'City', 'State', 'Phone', 'Website', 'Owner', 'Score', 'Status'].join(','),
-      ...leadsToExport.map(lead => [
-        lead.rank,
-        `"${lead.name}"`,
-        lead.city,
-        lead.state,
-        lead.phone || '',
-        lead.website || '',
-        `"${lead.owner || ''}"`,
-        lead.score,
-        lead.status
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `leads-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const timestamp = new Date().toISOString().split('T')[0];
     
-    toast({
-      title: "Export Successful",
-      description: `Exported ${leadsToExport.length} leads to CSV`
-    });
+    if (format === 'csv') {
+      const csvContent = [
+        ['Rank', 'Name', 'City', 'State', 'Phone', 'Website', 'Owner', 'Score', 'Status', 'Categories', 'Review Count', 'Rating', 'Address'].join(','),
+        ...leadsToExport.map(lead => [
+          lead.rank,
+          `"${lead.name}"`,
+          `"${lead.city}"`,
+          lead.state,
+          lead.phone || '',
+          lead.website || '',
+          `"${lead.owner || ''}"`,
+          lead.score,
+          lead.status,
+          `"${lead.business.categories?.join('; ') || ''}"`,
+          lead.review_count || 0,
+          lead.rating || '',
+          `"${lead.business.address_json?.street || ''}, ${lead.city}, ${lead.state}"`
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads-${timestamp}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: `Exported ${leadsToExport.length} leads to CSV`
+      });
+    } else if (format === 'json') {
+      const jsonData = leadsToExport.map(lead => ({
+        rank: lead.rank,
+        name: lead.name,
+        city: lead.city,
+        state: lead.state,
+        phone: lead.phone,
+        website: lead.website,
+        owner: lead.owner,
+        score: lead.score,
+        status: lead.status,
+        categories: lead.business.categories,
+        reviewCount: lead.review_count,
+        rating: lead.rating,
+        address: {
+          street: lead.business.address_json?.street,
+          city: lead.city,
+          state: lead.state,
+          zip: lead.business.address_json?.zip
+        },
+        business: {
+          id: lead.business.id,
+          placeId: lead.business.place_id,
+          hours: lead.business.hours_json
+        },
+        people: lead.people,
+        signals: lead.signals,
+        tags: lead.tags,
+        notes: lead.notes
+      }));
+
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads-${timestamp}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: `Exported ${leadsToExport.length} leads to JSON`
+      });
+    } else if (format === 'excel') {
+      // Create a simple HTML table that Excel can understand
+      const excelContent = `
+        <html xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            table { border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #4CAF50; color: white; font-weight: bold; }
+            .score-high { background-color: #d4edda; }
+            .score-medium { background-color: #fff3cd; }
+            .score-low { background-color: #f8d7da; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Business Name</th>
+                <th>City</th>
+                <th>State</th>
+                <th>Phone</th>
+                <th>Website</th>
+                <th>Owner</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Categories</th>
+                <th>Review Count</th>
+                <th>Rating</th>
+                <th>Full Address</th>
+                <th>Tags</th>
+                <th>Notes Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leadsToExport.map(lead => `
+                <tr class="${lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low'}">
+                  <td>${lead.rank}</td>
+                  <td>${lead.name}</td>
+                  <td>${lead.city}</td>
+                  <td>${lead.state}</td>
+                  <td>${lead.phone || ''}</td>
+                  <td>${lead.website || ''}</td>
+                  <td>${lead.owner || ''}</td>
+                  <td>${lead.score}</td>
+                  <td>${lead.status}</td>
+                  <td>${lead.business.categories?.join('; ') || ''}</td>
+                  <td>${lead.review_count || 0}</td>
+                  <td>${lead.rating || ''}</td>
+                  <td>${lead.business.address_json?.street || ''}, ${lead.city}, ${lead.state}</td>
+                  <td>${lead.tags.join(', ')}</td>
+                  <td>${lead.notes?.length || 0}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads-${timestamp}.xls`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: `Exported ${leadsToExport.length} leads to Excel`
+      });
+    }
   };
 
   return (
@@ -352,15 +477,33 @@ const Index = () => {
                   </Button>
                 </>
               )}
-              <Button 
-                onClick={exportToCsv} 
-                variant="outline" 
-                className="flex items-center gap-2"
-                disabled={searchResults.length === 0 || activeView === 'dashboard'}
-              >
-                <Download className="w-4 h-4" />
-                Export CSV
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    disabled={searchResults.length === 0 || activeView === 'dashboard'}
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => exportData('csv')}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportData('json')}>
+                    <FileJson className="w-4 h-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportData('excel')}>
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export as Excel
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
