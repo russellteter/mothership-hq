@@ -49,9 +49,24 @@ serve(async (req) => {
 
     if (jobError) throw jobError;
     const jobId = jobInsert.id as string;
+    // Log planning
+    await supabase.from('status_logs').insert({
+      search_job_id: jobId,
+      task: 'plan',
+      message: 'Planning enrichment pipeline',
+      severity: 'info',
+      ts: new Date().toISOString()
+    });
 
     // Minimal pipeline stub: delegate candidate search to existing function, then limit and mark as completed
     // Later, plug in deterministic verification and GPT-5 synthesis here.
+    await supabase.from('status_logs').insert({
+      search_job_id: jobId,
+      task: 'candidate_selection',
+      message: 'Selecting high-quality candidates',
+      severity: 'info',
+      ts: new Date().toISOString()
+    });
     const { data: candidates, error: searchError } = await supabase.functions.invoke('search-leads', {
       body: { dsl: dsl_json, original_prompt, custom_name, search_tags, lead_type },
       headers: { Authorization: `Bearer ${token}` }
@@ -62,6 +77,13 @@ serve(async (req) => {
     const candidateJobId = candidates.job_id as string;
 
     // Fetch final results from get-search-results for the candidate job, then take top N as a placeholder
+    await supabase.from('status_logs').insert({
+      search_job_id: jobId,
+      task: 'verifying',
+      message: 'Running deterministic verification checks (stub)',
+      severity: 'info',
+      ts: new Date().toISOString()
+    });
     const { data: finalData, error: resultError } = await supabase.functions.invoke('get-search-results', {
       body: { search_job_id: candidateJobId },
       headers: { Authorization: `Bearer ${token}` }
@@ -71,16 +93,38 @@ serve(async (req) => {
 
     const top = (finalData?.leads || []).slice(0, limit);
 
-    // Update the enriched job as completed and attach enriched results (placeholder pass-through)
-    await supabase
-      .from('search_jobs')
-      .update({ status: 'completed' })
-      .eq('id', jobId);
+    // Persist lead views for this enriched job (placeholder pass-through)
+    if (top.length > 0) {
+      const rows = top.map((lead: any, idx: number) => ({
+        search_job_id: jobId,
+        business_id: lead.business.id,
+        score: lead.score || 0,
+        subscores_json: lead.subscores || null,
+        rank: idx + 1
+      }));
+      await supabase.from('lead_views').insert(rows);
+    }
 
-    // Persist views for the enriched job if your schema expects it
-    // Skipped here for brevity; frontend will read via get-search-results with jobId when wired.
+    // Synthesis (stub)
+    await supabase.from('status_logs').insert({
+      search_job_id: jobId,
+      task: 'synthesizing',
+      message: 'Synthesizing enriched output (stub)',
+      severity: 'info',
+      ts: new Date().toISOString()
+    });
 
-    return new Response(JSON.stringify({ job_id: jobId, status: 'running', note: 'Enrichment pipeline stubbed; implement verification and synthesis.' }), {
+    // Mark job as completed
+    await supabase.from('search_jobs').update({ status: 'completed' }).eq('id', jobId);
+    await supabase.from('status_logs').insert({
+      search_job_id: jobId,
+      task: 'completed',
+      message: `Completed enriched search with ${top.length} leads`,
+      severity: 'success',
+      ts: new Date().toISOString()
+    });
+
+    return new Response(JSON.stringify({ job_id: jobId, status: 'completed', enriched_count: top.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
