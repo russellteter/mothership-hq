@@ -8,7 +8,7 @@ sync_changes() {
     echo "$(date): Checking for changes..."
     
     # Pull Lovable changes
-    git fetc origin
+    git fetch origin
     
     # Check if lovable branch has updates
     LOVABLE_BRANCH=$(git branch -r | grep lovable/design | head -1 | xargs)
