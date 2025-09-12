@@ -456,6 +456,8 @@ const Index = () => {
     }
   };
 
+  const exportToCsv = () => exportData('csv');
+
   return (
     <div className="h-screen flex bg-background">
       {showSearchPanel && <SearchPanel onSearch={handleSearch} isSearching={isSearching} />}

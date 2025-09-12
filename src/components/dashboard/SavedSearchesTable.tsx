@@ -92,10 +92,10 @@ export function SavedSearchesTable({ onRunSearch }: SavedSearchesTableProps) {
           created_at: search.created_at,
           last_run_at: search.updated_at,
           total_leads_found: Math.floor(Math.random() * 500) + 50, // Mock data for now
-          category: search.category || 'General',
-          tags: search.tags || [],
-          description: search.description || '',
-          frequency: search.frequency || 'manual'
+          category: (search as any).category || 'General',
+          tags: (search as any).tags || [],
+          description: (search as any).description || '',
+          frequency: (search as any).frequency || 'manual'
         }));
         setSavedSearches(saved);
       }

@@ -274,7 +274,7 @@ export function useLeadSearch() {
           setCurrentSearchJob(resultData.search_job);
           
           // Add to cache
-          addToCache(dsl, resultData.leads, resultData.search_job.id);
+          addToCache(resultData.search_job.dsl_json, resultData.leads, resultData.search_job.id);
           
           toast({
             title: "Search Completed",
