@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { SystemHealthIndicator } from '@/components/SystemHealthIndicator';
 import { SearchPanel } from '@/components/dashboard/SearchPanel';
 import { VirtualizedLeadsTable } from '@/components/dashboard/VirtualizedLeadsTable';
 import { LeadDetailPanel } from '@/components/dashboard/LeadDetailPanel';
@@ -484,6 +485,7 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground mt-1">Welcome back, {user?.email}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <SystemHealthIndicator />
                   <ThemeToggle />
                   <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
                     <LogOut className="h-4 w-4 mr-2" />
