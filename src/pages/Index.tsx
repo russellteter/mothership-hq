@@ -252,8 +252,6 @@ const Index = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const exportToCsv = () => exportData('csv');
-  
   const exportData = (format: 'csv' | 'json' | 'excel') => {
     const leadsToExport = filteredLeads.length > 0 ? filteredLeads : searchResults;
     
@@ -419,6 +417,8 @@ const Index = () => {
       });
     }
   };
+
+  const exportToCsv = () => exportData('csv');
 
   return (
     <div className="h-screen flex bg-background">
