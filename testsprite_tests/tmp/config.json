@@ -4,5 +4,14 @@
   "scope": "codebase",
   "localEndpoint": "http://localhost:5173",
   "loginUser": "russell.teter@gmail.com",
-  "loginPassword": "103Tempo!"
+  "loginPassword": "103Tempo!",
+  "executionArgs": {
+    "projectName": "mothership-hq",
+    "projectPath": "/Users/russellteter/Desktop/mothership-hq",
+    "testIds": [],
+    "additionalInstruction": "Focus on enriched-only search mode: toggle on, cap 20 leads, verify confidence_score visible; ensure JobStatusIndicator updates through planning/verifying/synthesizing/completed.",
+    "envs": {
+      "API_KEY": ""
+    }
+  }
 }
