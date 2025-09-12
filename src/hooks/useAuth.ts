@@ -8,6 +8,14 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // E2E bypass
+    if (import.meta.env.VITE_E2E_NO_AUTH === 'true') {
+      setUser({} as any);
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -39,6 +47,6 @@ export const useAuth = () => {
     session,
     loading,
     signOut,
-    isAuthenticated: !!user
+    isAuthenticated: import.meta.env.VITE_E2E_NO_AUTH === 'true' ? true : !!user
   };
 };
