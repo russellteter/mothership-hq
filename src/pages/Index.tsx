@@ -252,6 +252,8 @@ const Index = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const exportToCsv = () => exportData('csv');
+  
   const exportData = (format: 'csv' | 'json' | 'excel') => {
     const leadsToExport = filteredLeads.length > 0 ? filteredLeads : searchResults;
     
