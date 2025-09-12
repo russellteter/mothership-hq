@@ -202,6 +202,41 @@ async function validateAndGeocodeLocation(location: string): Promise<{
     return { city, state: state.substring(0, 2).toUpperCase() };
   }
   
+  // Special case for single-word major cities
+  const majorCities: Record<string, string> = {
+    'atlanta': 'GA',
+    'chicago': 'IL',
+    'boston': 'MA',
+    'seattle': 'WA',
+    'denver': 'CO',
+    'phoenix': 'AZ',
+    'portland': 'OR',
+    'miami': 'FL',
+    'dallas': 'TX',
+    'houston': 'TX',
+    'austin': 'TX',
+    'orlando': 'FL',
+    'detroit': 'MI',
+    'philadelphia': 'PA',
+    'manhattan': 'NY',
+    'brooklyn': 'NY',
+    'nashville': 'TN',
+    'memphis': 'TN',
+    'columbus': 'OH',
+    'charlotte': 'NC',
+    'baltimore': 'MD',
+    'milwaukee': 'WI',
+    'minneapolis': 'MN',
+    'sacramento': 'CA',
+    'oakland': 'CA'
+  };
+  
+  const cityLower = location.toLowerCase().trim();
+  if (majorCities[cityLower]) {
+    console.log(`Recognized major city: ${location} -> ${cityLower}, ${majorCities[cityLower]}`);
+    return { city: location, state: majorCities[cityLower] };
+  }
+  
   throw new Error(`Could not parse location: ${location}`);
 }
 

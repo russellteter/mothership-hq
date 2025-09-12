@@ -226,6 +226,21 @@ export function useLeadSearch() {
         setTimeout(() => {
           window.location.href = '/auth';
         }, 2000);
+      } else if (errorMessage.includes('Google Places API')) {
+        // Handle Google Places API specific errors
+        toast({
+          title: "Search Configuration Error",
+          description: "The search service is not properly configured. Please contact support to resolve this issue.",
+          variant: "destructive"
+        });
+        console.error('Google Places API configuration issue:', errorMessage);
+      } else if (errorMessage.includes('Edge Function returned a non-2xx status code')) {
+        // Handle Edge Function errors
+        toast({
+          title: "Search Service Error",
+          description: "The search service encountered an error. This might be due to missing API configuration. Please try again or contact support.",
+          variant: "destructive"
+        });
       } else {
         toast({
           title: "Search Failed",
