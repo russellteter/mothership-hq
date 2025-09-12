@@ -38,7 +38,14 @@ export function useLeadSearch() {
       return data;
     } catch (error) {
       console.error('Parse prompt error:', error);
-      throw new Error('Failed to parse prompt');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Check for specific API configuration issues
+      if (errorMessage.includes('OpenAI API key not configured')) {
+        throw new Error('Search service is not fully configured. OpenAI API key is missing. Please contact support.');
+      }
+      
+      throw new Error(`Failed to parse search request: ${errorMessage}`);
     }
   };
 
@@ -191,7 +198,15 @@ export function useLeadSearch() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge Function error:', error);
+        throw error;
+      }
+      
+      if (!data || !data.job_id) {
+        console.error('Invalid response from Edge Function:', data);
+        throw new Error('Invalid response from search service - no job ID returned');
+      }
 
       const jobId = data.job_id;
       setCurrentSearchJob({ 
@@ -212,11 +227,30 @@ export function useLeadSearch() {
       }
       
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Search error details:', error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred during search";
       
-      // Check if it's an authentication error
-      if (errorMessage.includes('session') || errorMessage.includes('auth') || errorMessage.includes('unauthorized')) {
+      // Parse Supabase Edge Function errors
+      let detailedError = errorMessage;
+      try {
+        // Check if error contains JSON error details from Edge Function
+        if (errorMessage.includes('{') && errorMessage.includes('}')) {
+          const jsonMatch = errorMessage.match(/\{.*\}/);
+          if (jsonMatch) {
+            const errorData = JSON.parse(jsonMatch[0]);
+            detailedError = errorData.error || errorData.message || errorMessage;
+          }
+        }
+      } catch (e) {
+        // Keep original error if parsing fails
+      }
+      
+      // Check for specific error types
+      if (detailedError.includes('Missing authorization header') || 
+          detailedError.includes('Invalid or expired token') ||
+          detailedError.includes('session') || 
+          detailedError.includes('auth') || 
+          detailedError.includes('unauthorized')) {
         toast({
           title: "Authentication Error",
           description: "Your session has expired. Please sign in again.",
@@ -226,27 +260,42 @@ export function useLeadSearch() {
         setTimeout(() => {
           window.location.href = '/auth';
         }, 2000);
-      } else if (errorMessage.includes('Google Places API')) {
-        // Handle Google Places API specific errors
+      } else if (detailedError.includes('Google Places API key not configured') || 
+                 detailedError.includes('GOOGLE_PLACES_API_KEY')) {
         toast({
-          title: "Search Configuration Error",
-          description: "The search service is not properly configured. Please contact support to resolve this issue.",
+          title: "API Configuration Error",
+          description: "Google Places API is not configured. Please ensure the API key is set in Supabase secrets.",
           variant: "destructive"
         });
-        console.error('Google Places API configuration issue:', errorMessage);
-      } else if (errorMessage.includes('Edge Function returned a non-2xx status code')) {
-        // Handle Edge Function errors
+        console.error('Google Places API key missing in Edge Function environment');
+      } else if (detailedError.includes('OpenAI API key not configured') || 
+                 detailedError.includes('OPENAI_API_KEY')) {
+        toast({
+          title: "API Configuration Error",
+          description: "OpenAI API is not configured. Please ensure the API key is set in Supabase secrets.",
+          variant: "destructive"
+        });
+        console.error('OpenAI API key missing in Edge Function environment');
+      } else if (detailedError.includes('Edge Function returned a non-2xx status code')) {
         toast({
           title: "Search Service Error",
-          description: "The search service encountered an error. This might be due to missing API configuration. Please try again or contact support.",
+          description: "The search service encountered an error. Check the browser console for details.",
+          variant: "destructive"
+        });
+        console.error('Edge Function error - Full details:', errorMessage);
+      } else if (detailedError.includes('Failed to parse search request')) {
+        toast({
+          title: "Invalid Search Query",
+          description: detailedError,
           variant: "destructive"
         });
       } else {
         toast({
           title: "Search Failed",
-          description: errorMessage,
+          description: detailedError.length > 100 ? detailedError.substring(0, 100) + '...' : detailedError,
           variant: "destructive"
         });
+        console.error('Full error details:', errorMessage);
       }
     } finally {
       setIsSearching(false);
