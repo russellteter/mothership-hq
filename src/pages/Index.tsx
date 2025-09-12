@@ -39,6 +39,7 @@ import { BulkOperations } from '@/components/dashboard/BulkOperations';
 import { LeadScoringProfiles } from '@/components/dashboard/LeadScoringProfiles';
 import { StickyHeader } from '@/components/ui/sticky-header';
 import { EmptyState, ErrorState, LoadingState, TableSkeleton } from '@/components/ui/standard-states';
+import { JobStatusIndicator, CompactJobStatus } from '@/components/ui/job-status-indicator';
 import { Lead, LeadQuery } from '@/types/lead';
 import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useSearchState } from '@/hooks/useSearchState';
@@ -477,10 +478,11 @@ const Index = () => {
                         {selectedLeadIds.length} selected
                       </Badge>
                     )}
-                    {currentSearchJob && (
-                      <Badge variant="secondary" className="font-medium">
-                        Status: {currentSearchJob.status}
-                      </Badge>
+                    {searchState.state !== 'idle' && (
+                      <CompactJobStatus 
+                        state={searchState.state} 
+                        progress={searchState.progress}
+                      />
                     )}
                   </div>
                 </div>
@@ -541,6 +543,16 @@ const Index = () => {
                 </div>
               ) : (
                 <div className="p-4 space-y-4">
+                  {/* Job Status Indicator */}
+                  {searchState.state !== 'idle' && searchState.state !== 'completed' && (
+                    <JobStatusIndicator
+                      state={searchState.state}
+                      progress={searchState.progress}
+                      message={searchState.message}
+                      elapsedTime={searchState.elapsedTime}
+                    />
+                  )}
+                  
                   {/* Search Results Banner */}
                   <SearchResultsBanner
                     searchJob={currentSearchJob}
