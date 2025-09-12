@@ -16,3 +16,6 @@ enable_signup = true
 
 [functions.rescore-leads]
 verify_jwt = true
+
+[functions.health-check]
+verify_jwt = false

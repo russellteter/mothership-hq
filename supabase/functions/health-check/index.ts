@@ -184,6 +184,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check doesn't require authentication - it's a public endpoint
+  // This allows monitoring services and admins to check system health
+  
   try {
     // Run all health checks in parallel
     const [supabaseCheck, googlePlacesCheck, openAiCheck] = await Promise.all([
