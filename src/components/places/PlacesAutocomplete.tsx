@@ -27,7 +27,7 @@ export function PlacesAutocomplete() {
 
   return (
     <input
-      rxt"
+      ref={inputRef}
       placeholder="Search for places..."
       className="w-full px-4 py-2 border rounded-lg"
     />
