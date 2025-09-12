@@ -1,0 +1,6 @@
+# Lovable handles these
+*.css merge=ours
+*.scss merge=# Cursor handles these
+src/services/* merge=ours
+src/api/* merge=ours
+*.ts merge=ours

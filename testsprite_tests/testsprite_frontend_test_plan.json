@@ -1,0 +1,548 @@
+[
+  {
+    "id": "TC001",
+    "title": "Successful User Sign Up and Sign In",
+    "description": "Verify that a new user can sign up with valid credentials and then sign in successfully with those credentials.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to sign up page"
+      },
+      {
+        "type": "action",
+        "description": "Input valid user details and submit sign up form"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that sign up completes successfully and user is redirected to sign in"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to sign in page"
+      },
+      {
+        "type": "action",
+        "description": "Input registered user credentials and submit sign in form"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that sign in is successful and dashboard is loaded"
+      },
+      {
+        "type": "assertion",
+        "description": "Validate that user session persists across page reloads"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Failed Sign In With Invalid Credentials",
+    "description": "Verify the system prevents sign in with invalid username or password and shows appropriate error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to sign in page"
+      },
+      {
+        "type": "action",
+        "description": "Enter incorrect username and/or password"
+      },
+      {
+        "type": "action",
+        "description": "Click sign in button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that an error message is displayed indicating invalid credentials"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is not logged in or redirected to dashboard"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Natural Language Lead Search - Basic Query",
+    "description": "Verify that inputting a natural language query returns relevant SMB leads within 2 seconds.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Dashboard and locate the search input"
+      },
+      {
+        "type": "action",
+        "description": "Input a simple natural language query such as 'tech startups in San Francisco'"
+      },
+      {
+        "type": "assertion",
+        "description": "Validate that search results are returned in under 2 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify leads are relevant based on query context and lead scoring is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Natural Language Lead Search - Complex Query with Filters",
+    "description": "Verify natural language queries combined with advanced filters apply correctly and results update accordingly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Enter a complex natural language query like 'small businesses with annual revenue > $1M in New York'"
+      },
+      {
+        "type": "action",
+        "description": "Apply advanced filters such as industry and lead score thresholds"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that search results match both query intent and filter criteria"
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure results update dynamically and response time remains under 2 seconds"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Lead Scoring - Real-time Updates and Custom Profiles",
+    "description": "Validate that lead scoring updates in real time when changing scoring profiles and based on engagement factors.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Select a set of leads from search results"
+      },
+      {
+        "type": "action",
+        "description": "Change the lead scoring profile to an industry-specific custom profile"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify lead scores are recalculated and displayed immediately"
+      },
+      {
+        "type": "action",
+        "description": "Trigger an engagement event (e.g., viewing lead detail or adding notes)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify lead score and qualification status update accordingly in real time"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Lead Detail Panel Interaction",
+    "description": "Verify the lead detail panel displays comprehensive information and supports notes, tags, status updates, and lead assignment.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open detail panel for a selected lead"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm display of business signals, contact info, website analysis, and AI insights"
+      },
+      {
+        "type": "action",
+        "description": "Add a note and apply a tag to the lead"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that note and tag are saved and visible in the panel"
+      },
+      {
+        "type": "action",
+        "description": "Change lead status and assign to a team member"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that status and assignment updates persist and reflect in all relevant views"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Multiple UI Views - Dashboard, Table, Kanban Board",
+    "description": "Verify navigation and interaction across the three main UI views, ensuring real-time updates and proper functionality.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Dashboard home view and verify metric displays"
+      },
+      {
+        "type": "action",
+        "description": "Switch to Table view and validate virtualized grid with multi-select and scoring visualization"
+      },
+      {
+        "type": "action",
+        "description": "Perform bulk operation such as updating lead status"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm bulk operation applies successfully and updates are shown in real time"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to Kanban Board view and drag a lead card between status columns"
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure drag-and-drop updates lead status correctly and reflects across views"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Search History and Saved Searches Functionality",
+    "description": "Verify that search queries are tracked in history, and saved searches can be named, tagged, re-run, and deleted.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform multiple distinct search queries"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify search history displays recent queries with timestamps and performance metrics"
+      },
+      {
+        "type": "action",
+        "description": "Save a search with a custom name and tags"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm saved search appears in saved searches list with correct metadata"
+      },
+      {
+        "type": "action",
+        "description": "Re-run a saved search and verify that results match saved query parameters"
+      },
+      {
+        "type": "action",
+        "description": "Delete a saved search"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that saved search is removed from the list and no longer accessible"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Export Lead Data in Multiple Formats",
+    "description": "Validate export functionality for CSV, JSON, and styled Excel formats with user-selected data fields.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Apply filters to narrow down leads"
+      },
+      {
+        "type": "action",
+        "description": "Open export dialog and select CSV format with specific fields"
+      },
+      {
+        "type": "action",
+        "description": "Download exported file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the CSV file contains correct data and formatting"
+      },
+      {
+        "type": "action",
+        "description": "Repeat export for JSON format with another set of selected fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Validate JSON file structure and data accuracy"
+      },
+      {
+        "type": "action",
+        "description": "Repeat export for styled Excel format"
+      },
+      {
+        "type": "assertion",
+        "description": "Check Excel file produces correct styling and includes chosen data fields"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Advanced Filtering Reliability and Performance",
+    "description": "Verify that complex filter combinations apply correctly, update search results in real time, and maintain persistent state.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Select multiple filter criteria including industry, revenue range, location, and lead score"
+      },
+      {
+        "type": "assertion",
+        "description": "Validate search result updates dynamically and response time is under 2 seconds"
+      },
+      {
+        "type": "action",
+        "description": "Save filter set"
+      },
+      {
+        "type": "assertion",
+        "description": "Check that saved filters can be retrieved and re-applied correctly"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page and verify filters and results persist"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Collaboration Features - Shared Searches and Lead Assignment",
+    "description": "Validate shared searches are accessible by team members and lead assignments update across user sessions.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create and share a saved search with a team member"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm team member can view and execute the shared search"
+      },
+      {
+        "type": "action",
+        "description": "Assign a lead to a team member"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that assignment is updated for both users and visible in respective dashboards"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Theme Management - Light/Dark Mode Toggle and System Detection",
+    "description": "Verify that the application supports switching between light and dark modes, respects system theme preferences, and persists user settings.",
+    "category": "ui",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Observe application theme picked based on system preference on initial load"
+      },
+      {
+        "type": "action",
+        "description": "Manually toggle between light and dark modes via the theme switch"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI updates correctly to chosen theme"
+      },
+      {
+        "type": "action",
+        "description": "Reload the application"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm selected theme persists after reload"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Security - Role-Based Access Control Enforcement",
+    "description": "Verify that different user roles have correct permissions and cannot access unauthorized routes or functionalities.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a user with limited permissions"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access admin-only views or perform restricted actions"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied with an appropriate message or redirection"
+      },
+      {
+        "type": "action",
+        "description": "Login as an admin user"
+      },
+      {
+        "type": "action",
+        "description": "Verify admin routes and operations are accessible and functional"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Error Handling - API Failures and Network Issues",
+    "description": "Validate the system displays user-friendly error messages and recovers gracefully from backend API failures or network interruptions.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate API failure or timeout during lead search execution"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an informative error message appears and search input remains usable"
+      },
+      {
+        "type": "action",
+        "description": "Simulate network disconnection during data export"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm user is notified of the issue and no corrupted files are downloaded"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Performance - Virtualized Table and Kanban Board Responsiveness",
+    "description": "Confirm that UI components with large data sets perform efficiently with smooth scrolling and drag-drop without lag.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Load table view with over 1000 leads"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify virtual scrolling works smoothly without freezing or long delays"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to board view with large number of lead cards"
+      },
+      {
+        "type": "action",
+        "description": "Drag and drop a card between status columns"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm drag-drop operations are fluid and state updates correctly"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Compliance - GDPR and Data Encryption Verification",
+    "description": "Validate the application enforces data privacy compliance including user consent and secure data encryption at rest and in transit.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Review sign up and data handling flows for explicit user consent prompts"
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure system does not proceed without required consent"
+      },
+      {
+        "type": "action",
+        "description": "Inspect data stored in database for encryption"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that sensitive data fields are encrypted"
+      },
+      {
+        "type": "action",
+        "description": "Monitor network traffic during app usage"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm data is transmitted using secure protocols (e.g., HTTPS, encrypted websocket)"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "AI-Powered Lead Insights Accuracy and Relevance",
+    "description": "Verify the AI-generated insights offer personalized, relevant recommendations and update dynamically with lead data changes.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Select a lead and view generated AI insights"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify insights are relevant to lead business signals and engagement history"
+      },
+      {
+        "type": "action",
+        "description": "Modify lead data input (e.g., add a note or update tag)"
+      },
+      {
+        "type": "assertion",
+        "description": "Check AI insights refresh and reflect updated lead context"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Session Management and Protected Route Access",
+    "description": "Verify authenticated sessions persist securely and unauthorized users are redirected away from protected areas.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as a valid user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate through multiple protected routes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is granted without repeated authentication"
+      },
+      {
+        "type": "action",
+        "description": "Logout from the system"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access protected routes directly via URL"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm user is redirected to sign in page"
+      }
+    ]
+  }
+]

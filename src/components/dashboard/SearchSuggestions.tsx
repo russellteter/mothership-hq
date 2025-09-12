@@ -31,43 +31,112 @@ export function SearchSuggestions({ currentPrompt, onSuggestionSelect, isVisible
   const generateSuggestions = async (prompt: string) => {
     setLoading(true);
     try {
-      // Simulate AI-powered suggestions based on prompt analysis
-      const mockSuggestions: SearchSuggestion[] = [
-        {
-          id: '1',
-          prompt: prompt.replace('Columbia, SC', 'Charleston, SC'),
-          category: 'geographic',
-          reason: 'Similar market with higher lead density',
-          confidence: 0.85
-        },
-        {
-          id: '2',
-          prompt: prompt + ' with owner identified',
-          category: 'optimization',
-          reason: 'Adding owner identification improves reachability by 40%',
-          confidence: 0.92
-        },
-        {
-          id: '3',
-          prompt: prompt.replace('dentists', 'orthodontists'),
-          category: 'similar',
-          reason: 'Adjacent vertical with similar pain points',
-          confidence: 0.78
-        },
-        {
-          id: '4',
-          prompt: 'Small dental practices in ' + (prompt.match(/in ([^,]+)/)?.[1] || 'Columbia') + ' with no online reviews',
-          category: 'trending',
-          reason: 'High-converting pattern from recent searches',
-          confidence: 0.88
+      // Parse prompt to identify key components
+      const promptLower = prompt.toLowerCase();
+      const hasLocation = /\b(in|near|around)\s+[\w\s,]+/i.test(prompt);
+      const hasBusiness = /\b(restaurant|dental|medical|retail|salon|gym|spa|clinic|office|shop|store)/i.test(prompt);
+      const hasOwner = /\b(owner|contact|email|phone)\b/i.test(prompt);
+      const hasWebsite = /\b(website|online|digital|web)\b/i.test(prompt);
+      const hasReviews = /\b(review|rating|reputation)\b/i.test(prompt);
+      
+      const dynamicSuggestions: SearchSuggestion[] = [];
+      
+      // Geographic expansion suggestions
+      if (hasLocation) {
+        const location = prompt.match(/(?:in|near|around)\s+([\w\s,]+?)(?:\s+with|\s+that|\s+who|$)/i)?.[1];
+        if (location) {
+          dynamicSuggestions.push({
+            id: `geo-1`,
+            prompt: prompt.replace(location, 'nearby metropolitan areas'),
+            category: 'geographic',
+            reason: 'Expand search to surrounding markets for more opportunities',
+            confidence: 0.82
+          });
         }
-      ];
-
+      }
+      
+      // Optimization suggestions based on missing criteria
+      if (!hasOwner) {
+        dynamicSuggestions.push({
+          id: 'opt-1',
+          prompt: prompt + ' with verified owner contact information',
+          category: 'optimization',
+          reason: 'Leads with owner info have 3x higher conversion rates',
+          confidence: 0.95
+        });
+      }
+      
+      if (!hasWebsite) {
+        dynamicSuggestions.push({
+          id: 'opt-2',
+          prompt: prompt + ' lacking professional website',
+          category: 'optimization',
+          reason: 'Businesses without websites are prime candidates for digital services',
+          confidence: 0.88
+        });
+      }
+      
+      if (!hasReviews) {
+        dynamicSuggestions.push({
+          id: 'opt-3',
+          prompt: prompt + ' with less than 10 online reviews',
+          category: 'optimization',
+          reason: 'Low review count indicates opportunity for reputation management',
+          confidence: 0.86
+        });
+      }
+      
+      // Industry-specific suggestions
+      if (hasBusiness) {
+        const businessType = prompt.match(/\b(restaurant|dental|medical|retail|salon|gym|spa|clinic|office|shop|store)/i)?.[1];
+        if (businessType) {
+          // Similar business types
+          const similarTypes: Record<string, string[]> = {
+            'restaurant': ['cafe', 'bakery', 'food truck', 'catering service'],
+            'dental': ['orthodontist', 'oral surgeon', 'pediatric dentist'],
+            'medical': ['urgent care', 'specialist clinic', 'wellness center'],
+            'retail': ['boutique', 'specialty store', 'online retailer'],
+            'salon': ['spa', 'barbershop', 'nail salon', 'beauty studio'],
+            'gym': ['fitness studio', 'yoga studio', 'martial arts', 'personal training']
+          };
+          
+          const similar = similarTypes[businessType.toLowerCase()]?.[0];
+          if (similar) {
+            dynamicSuggestions.push({
+              id: 'sim-1',
+              prompt: prompt.replace(new RegExp(businessType, 'i'), similar),
+              category: 'similar',
+              reason: `${similar} businesses have similar needs and pain points`,
+              confidence: 0.79
+            });
+          }
+        }
+      }
+      
+      // Trending patterns
+      dynamicSuggestions.push({
+        id: 'trend-1',
+        prompt: promptLower.includes('small') ? prompt : `Small ${prompt}`,
+        category: 'trending',
+        reason: 'Small businesses (1-10 employees) show highest engagement rates',
+        confidence: 0.91
+      });
+      
+      if (!promptLower.includes('new') && !promptLower.includes('recently')) {
+        dynamicSuggestions.push({
+          id: 'trend-2',
+          prompt: 'Recently opened ' + prompt.replace(/^(find|search for|get)\s+/i, ''),
+          category: 'trending',
+          reason: 'New businesses are 2x more likely to need services',
+          confidence: 0.87
+        });
+      }
+      
       // Filter out suggestions that are too similar to current prompt
-      const filteredSuggestions = mockSuggestions.filter(s => 
-        s.prompt.toLowerCase() !== prompt.toLowerCase()
-      );
-
+      const filteredSuggestions = dynamicSuggestions
+        .filter(s => s.prompt.toLowerCase() !== prompt.toLowerCase())
+        .slice(0, 6); // Limit to 6 suggestions
+      
       setSuggestions(filteredSuggestions);
     } catch (error) {
       console.error('Error generating suggestions:', error);

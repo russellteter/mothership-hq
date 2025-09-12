@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Lead, LeadQuery, ParseResult, SearchJob } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
 import { generateSearchName, generateSearchTags, categorizeLeadType } from './useSearchNaming';
+import { useSearchCache, useRecentSearches } from './useSearchCache';
 
 export function useLeadSearch() {
   const [isSearching, setIsSearching] = useState(false);
@@ -10,6 +11,10 @@ export function useLeadSearch() {
   const [currentSearchJob, setCurrentSearchJob] = useState<SearchJob | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Cache management
+  const { getCachedResults, addToCache, clearCache } = useSearchCache();
+  const { recentSearches, addRecentSearch } = useRecentSearches();
 
   const parsePrompt = async (prompt: string): Promise<ParseResult> => {
     try {
@@ -26,6 +31,24 @@ export function useLeadSearch() {
   };
 
   const searchLeads = useCallback(async (dsl: LeadQuery, originalPrompt?: string): Promise<void> => {
+    // Check cache first
+    const cached = getCachedResults(dsl);
+    if (cached) {
+      console.log('Using cached results for query');
+      setSearchResults(cached.results);
+      setCurrentSearchJob({
+        id: cached.jobId || 'cached',
+        status: 'completed',
+        dsl_json: dsl,
+        original_prompt: originalPrompt
+      } as SearchJob);
+      toast({
+        title: "Cached Results",
+        description: `Showing ${cached.results.length} cached results`
+      });
+      return;
+    }
+    
     // Cancel any existing search
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -38,6 +61,11 @@ export function useLeadSearch() {
     
     setIsSearching(true);
     setSearchResults([]);
+    
+    // Add to recent searches if original prompt provided
+    if (originalPrompt) {
+      addRecentSearch(originalPrompt);
+    }
     
     // Create new abort controller for this request
     abortControllerRef.current = new AbortController();
@@ -155,6 +183,9 @@ export function useLeadSearch() {
         if (resultData.search_job.status === 'completed') {
           setSearchResults(resultData.leads);
           setCurrentSearchJob(resultData.search_job);
+          
+          // Add to cache
+          addToCache(dsl, resultData.leads, resultData.search_job.id);
           
           toast({
             title: "Search Completed",
@@ -287,6 +318,8 @@ export function useLeadSearch() {
     searchLeads,
     updateLeadStatus,
     addNote,
-    addTag
+    addTag,
+    clearCache,
+    recentSearches
   };
 }
