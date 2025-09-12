@@ -74,6 +74,44 @@ const Index = () => {
 
   const { searchState, updateState, resetState } = useSearchState();
 
+  // Realtime progress for current search job
+  useEffect(() => {
+    if (!currentSearchJob?.id) return;
+
+    const jobId = currentSearchJob.id;
+
+    const mapTaskToProgress = (task: string) => {
+      switch (task) {
+        case 'plan': return { state: 'running', progress: 10, message: 'Planning enrichment...' } as const;
+        case 'candidate_selection': return { state: 'running', progress: 25, message: 'Selecting high-quality candidates...' } as const;
+        case 'verifying': return { state: 'running', progress: 60, message: 'Verifying features and contacts...' } as const;
+        case 'synthesizing': return { state: 'running', progress: 85, message: 'Synthesizing results...' } as const;
+        case 'completed': return { state: 'completed', progress: 100, message: 'Search completed' } as const;
+        default: return { state: 'running', progress: 50, message: 'Processing...' } as const;
+      }
+    };
+
+    const channel = supabase.channel(`enrichment:${jobId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'status_logs', filter: `search_job_id=eq.${jobId}` }, (payload: any) => {
+        const task = payload?.new?.task as string;
+        const mapped = mapTaskToProgress(task);
+        updateState(mapped.state as any, mapped.message, mapped.progress);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'search_jobs', filter: `id=eq.${jobId}` }, (payload: any) => {
+        const status = payload?.new?.status as 'queued' | 'running' | 'completed' | 'failed';
+        if (status === 'completed') {
+          updateState('completed', 'Search completed', 100);
+        } else if (status === 'failed') {
+          updateState('failed', 'Search failed');
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentSearchJob?.id]);
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate('/auth');
@@ -431,7 +469,7 @@ const Index = () => {
               elapsedTime={searchState.elapsedTime}
               searchState={searchState.state}
               progress={searchState.progress}
-              onExport={exportToCsv}
+              onExport={() => exportData('csv')}
               onOpenScoring={() => setShowScoringSettings(!showScoringSettings)}
               onOpenSearch={() => setShowSearchPanel(!showSearchPanel)}
             />
@@ -509,7 +547,7 @@ const Index = () => {
                     </>
                   )}
                   <Button 
-                    onClick={exportToCsv} 
+                    onClick={() => exportData('csv')} 
                     variant="outline" 
                     className="flex items-center gap-2"
                     disabled={searchResults.length === 0 || activeView === 'dashboard'}

@@ -51,6 +51,10 @@ export interface Business {
   lat?: number;
   lng?: number;
   franchise_bool?: boolean;
+  // Optional fields surfaced in UI exports
+  categories?: string[];
+  place_id?: string;
+  hours_json?: any;
   created_at: string;
   updated_at: string;
 }
@@ -113,6 +117,7 @@ export interface Lead {
   owner?: string;
   owner_email?: string;
   review_count?: number;
+  rating?: number;
   status: 'new' | 'qualified' | 'ignored';
   tags: string[];
   business: Business;
