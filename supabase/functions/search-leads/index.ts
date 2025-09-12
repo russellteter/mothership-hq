@@ -583,27 +583,53 @@ serve(async (req) => {
     let allPlaces: any[] = [];
     let nextPageToken = null;
     let pageCount = 0;
-    const maxPages = Math.ceil(dsl.result_size.target / 20); // 20 results per page
+    const maxPages = Math.ceil((dsl.result_size?.target || 20) / 20); // 20 results per page
     
-    do {
-      const places = await searchGooglePlacesWithPagination(
-        businessTypes[0], 
-        location, 
-        businessTypes,
-        nextPageToken
-      );
+    try {
+      do {
+        const places = await searchGooglePlacesWithPagination(
+          dsl.vertical || businessTypes[0], 
+          location, 
+          businessTypes,
+          nextPageToken
+        );
+        
+        allPlaces = allPlaces.concat(places.results || []);
+        nextPageToken = places.next_page_token;
+        pageCount++;
+        
+        // Rate limiting between pages
+        if (nextPageToken && pageCount < maxPages) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } while (nextPageToken && pageCount < maxPages);
       
-      allPlaces = allPlaces.concat(places.results || []);
-      nextPageToken = places.next_page_token;
-      pageCount++;
+      console.log(`Found ${allPlaces.length} total places across ${pageCount} pages`);
+    } catch (apiError) {
+      console.error('Google Places API error:', apiError);
       
-      // Rate limiting between pages
-      if (nextPageToken && pageCount < maxPages) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    } while (nextPageToken && pageCount < maxPages);
-    
-    console.log(`Found ${allPlaces.length} total places across ${pageCount} pages`);
+      // Update job status with error
+      await supabase
+        .from('search_jobs')
+        .update({
+          status: 'failed',
+          error_text: apiError.message
+        })
+        .eq('id', searchJob.id);
+      
+      // Log the error
+      await supabase
+        .from('status_logs')
+        .insert({
+          search_job_id: searchJob.id,
+          task: 'api_error',
+          message: `Google Places API error: ${apiError.message}`,
+          severity: 'error',
+          ts: new Date().toISOString()
+        });
+      
+      throw apiError;
+    }
     
     // Log fetching complete
     await supabase
@@ -699,14 +725,211 @@ async function searchGooglePlacesWithPagination(
   types: string[], 
   pageToken?: string
 ): Promise<any> {
-  // Implementation would go here
-  // This is a placeholder that would integrate with Google Places API
-  return { results: [], next_page_token: null };
+  const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY');
+  
+  if (!apiKey) {
+    console.error('GOOGLE_PLACES_API_KEY not configured');
+    throw new Error('Google Places API key is not configured. Please set GOOGLE_PLACES_API_KEY in Supabase Edge Functions secrets.');
+  }
+  
+  try {
+    // Use Google Places Text Search API for broader results
+    const baseUrl = 'https://maps.googleapis.com/maps/api/place/textsearch/json';
+    
+    const params = new URLSearchParams({
+      query: `${query} in ${location}`,
+      key: apiKey,
+      ...(pageToken && { pagetoken: pageToken })
+    });
+    
+    // Add type filter if specified
+    if (types && types.length > 0 && types[0] !== 'establishment') {
+      params.append('type', types[0]);
+    }
+    
+    const url = `${baseUrl}?${params}`;
+    console.log('Calling Google Places API:', url.replace(apiKey, 'REDACTED'));
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.status === 'REQUEST_DENIED') {
+      console.error('Google Places API error:', data.error_message);
+      throw new Error(`Google Places API access denied: ${data.error_message || 'Invalid API key or service not enabled'}`);
+    }
+    
+    if (data.status === 'ZERO_RESULTS') {
+      console.log('No results found for query:', query, 'in', location);
+      return { results: [], next_page_token: null };
+    }
+    
+    if (data.status !== 'OK') {
+      console.error('Google Places API error status:', data.status);
+      throw new Error(`Google Places API error: ${data.status}`);
+    }
+    
+    console.log(`Found ${data.results?.length || 0} places, next_page_token: ${data.next_page_token ? 'yes' : 'no'}`);
+    
+    return {
+      results: data.results || [],
+      next_page_token: data.next_page_token || null
+    };
+  } catch (error) {
+    console.error('Error calling Google Places API:', error);
+    throw error;
+  }
 }
 
 // Helper function to process individual place
 async function processPlace(place: any, dsl: any, jobId: string): Promise<any> {
-  // Implementation would process and enrich each place
-  // This is a placeholder for the actual implementation
-  return null;
+  try {
+    // Extract address components
+    const addressParts = place.formatted_address?.split(',') || [];
+    const city = addressParts[addressParts.length - 3]?.trim() || dsl.geo.city;
+    const stateZip = addressParts[addressParts.length - 2]?.trim() || '';
+    const state = stateZip.split(' ')[0] || dsl.geo.state;
+    
+    // Create business record
+    const business = {
+      name: place.name,
+      vertical: dsl.vertical,
+      website: place.website || null,
+      phone: place.formatted_phone_number || null,
+      address_json: {
+        street: addressParts[0]?.trim() || '',
+        city: city,
+        state: state,
+        zip: stateZip.split(' ')[1] || '',
+        country: 'US'
+      },
+      lat: place.geometry?.location?.lat || 0,
+      lng: place.geometry?.location?.lng || 0,
+      franchise_bool: false,
+      google_place_id: place.place_id,
+      metadata: {
+        rating: place.rating,
+        user_ratings_total: place.user_ratings_total,
+        price_level: place.price_level,
+        types: place.types,
+        business_status: place.business_status
+      }
+    };
+    
+    // Check if business already exists
+    const { data: existingBusiness } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('google_place_id', place.place_id)
+      .single();
+    
+    let businessId: string;
+    
+    if (existingBusiness) {
+      businessId = existingBusiness.id;
+      // Update existing business
+      await supabase
+        .from('businesses')
+        .update(business)
+        .eq('id', businessId);
+    } else {
+      // Insert new business
+      const { data: newBusiness, error: insertError } = await supabase
+        .from('businesses')
+        .insert(business)
+        .select('id')
+        .single();
+      
+      if (insertError) {
+        console.error('Error inserting business:', insertError);
+        return null;
+      }
+      
+      businessId = newBusiness.id;
+    }
+    
+    // Create signals based on place data
+    const signals = [];
+    
+    // Website signal
+    if (!place.website) {
+      signals.push({
+        business_id: businessId,
+        type: 'no_website',
+        value_json: true,
+        confidence: 0.95,
+        source_key: 'google_places'
+      });
+    }
+    
+    // Rating signals
+    if (place.rating) {
+      signals.push({
+        business_id: businessId,
+        type: 'rating',
+        value_json: place.rating,
+        confidence: 1.0,
+        source_key: 'google_places'
+      });
+    }
+    
+    if (place.user_ratings_total) {
+      signals.push({
+        business_id: businessId,
+        type: 'review_count',
+        value_json: place.user_ratings_total,
+        confidence: 1.0,
+        source_key: 'google_places'
+      });
+    }
+    
+    // Business hours signal
+    if (place.opening_hours) {
+      signals.push({
+        business_id: businessId,
+        type: 'has_hours',
+        value_json: true,
+        confidence: 1.0,
+        source_key: 'google_places',
+        metadata: place.opening_hours
+      });
+    }
+    
+    // Insert signals
+    if (signals.length > 0) {
+      await supabase
+        .from('signals')
+        .upsert(signals, { onConflict: 'business_id,type' });
+    }
+    
+    // Calculate initial score
+    const scoreResult = calculateEnhancedScore(
+      signals,
+      dsl.constraints || {},
+      dsl.scoring_profile || 'generic'
+    );
+    
+    // Create lead view for this search job
+    const { error: leadViewError } = await supabase
+      .from('lead_views')
+      .insert({
+        search_job_id: jobId,
+        business_id: businessId,
+        score: scoreResult.score,
+        subscores_json: scoreResult.subscores,
+        rank: 0 // Will be updated later
+      });
+    
+    if (leadViewError) {
+      console.error('Error creating lead view:', leadViewError);
+    }
+    
+    return {
+      businessId,
+      score: scoreResult.score,
+      business
+    };
+  } catch (error) {
+    console.error('Error processing place:', error);
+    return null;
+  }
 }
