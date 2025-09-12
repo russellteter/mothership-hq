@@ -1,7 +1,17 @@
 {
-  "status": "init",
-  "scope": "codebase",
+  "status": "commited",
   "type": "frontend",
+  "scope": "codebase",
   "localEndpoint": "http://localhost:8080",
-  "serverPort": 64220
+  "loginUser": "russell.teter@gmail.com",
+  "loginPassword": "103Tempo!",
+  "executionArgs": {
+    "projectName": "mothership-hq",
+    "projectPath": "/Users/russellteter/Desktop/mothership-hq",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-GZCJ0N78KoXqaGGlWn01m4wBFOECgwdXsEBET4W3yBUbuUWFfMm8eVvgJRbMkF-89vyBpOMu3_DI-mPJX1GmyPGrFtmyBwoebxBsAF_yFd_vbljand0CKm77bO1c0I9hWSw"
+    }
+  }
 }

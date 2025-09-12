@@ -1,0 +1,233 @@
+{
+  "meta": {
+    "project": "SMB Lead Finder Platform",
+    "date": "2025-09-11",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "SMB Lead Finder is an intelligent lead generation and management platform designed to help sales teams and businesses discover, qualify, and engage with small-to-medium business prospects. Leveraging AI-powered natural language search, lead scoring, and insightful data analysis, it streamlines the entire lead lifecycle from discovery to conversion.",
+  "core_goals": [
+    "Enable users to discover high-quality SMB leads using natural language queries.",
+    "Automatically score and qualify leads based on multiple business and engagement factors.",
+    "Provide actionable AI-powered insights to improve lead conversion rates.",
+    "Streamline lead management workflows with multiple view modes and collaboration features.",
+    "Support advanced filtering, saved searches, and export capabilities to enhance usability and data accessibility.",
+    "Ensure data security, privacy compliance, and role-based access control across the platform."
+  ],
+  "key_features": [
+    "Natural Language Lead Search with AI parsing and real-time suggestions.",
+    "Comprehensive Lead Scoring System with customizable industry-specific profiles.",
+    "Lead Intelligence & Insights including website analysis, business signals, and outreach recommendations.",
+    "Multiple UI Views: Dashboard (metrics and KPIs), Table (virtualized grid), and Kanban Board for pipeline management.",
+    "Advanced Filtering with real-time complex filters and saved filter sets.",
+    "Search History and Saved Searches for easy re-use and analytics tracking.",
+    "Export system supporting CSV, JSON, and styled Excel formats.",
+    "Authentication and Session Management using Supabase Auth.",
+    "Collaboration tools including shared searches, lead assignment, notes, and activity tracking.",
+    "Theme Management supporting light/dark modes with system preference detection."
+  ],
+  "user_flow_summary": [
+    "Lead Discovery: User inputs natural language search query, system processes and displays scored leads with filtering and saving options.",
+    "Lead Qualification: Users select leads, view detailed profile panels, apply tags, notes, update lead status, and assign team members.",
+    "Export Flow: Users apply filters, choose export formats, select data fields, and download lead data for external use.",
+    "Authentication Flow: Users sign in or sign up securely with session persistence and protected route access.",
+    "Dashboard Interaction: Users navigate between Dashboard home, Table view, and Board view with real-time updates and actionable insights."
+  ],
+  "validation_criteria": [
+    "Search results return in under 2 seconds with accurate relevance ranking.",
+    "Lead scores are calculated and updated in real time with customizable profiles.",
+    "AI-powered insights generate personalized, relevant recommendations for each lead.",
+    "Exported files correctly reflect user-selected formats and included data fields.",
+    "Authentication system enforces secure access with session management and role-based permissions.",
+    "Filters and saved searches function reliably with persistent state and fast response.",
+    "Multiple UI views load efficiently with virtual scrolling and drag-and-drop support where applicable.",
+    "User workflows for lead discovery, qualification, and export are intuitive and error-free.",
+    "System complies with GDPR, enforces data encryption, and protects sensitive data.",
+    "Application uptime meets 99.9% SLA with low latency real-time updates."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "React 18",
+      "Vite",
+      "Supabase",
+      "PostgreSQL",
+      "TailwindCSS",
+      "shadcn/ui",
+      "React Query (TanStack Query)",
+      "React Router v6",
+      "React Hook Form",
+      "Zod",
+      "OpenAI GPT-4",
+      "Google Places API",
+      "Deno (Edge Functions)"
+    ],
+    "features": [
+      {
+        "name": "Authentication System",
+        "description": "Supabase-based authentication with session management, sign-in/sign-up interface, and protected routes",
+        "files": [
+          "src/hooks/useAuth.ts",
+          "src/pages/AuthPage.tsx",
+          "src/pages/Index.tsx"
+        ]
+      },
+      {
+        "name": "Natural Language Search",
+        "description": "AI-powered search system that converts natural language queries into structured searches with real-time suggestions",
+        "files": [
+          "src/components/dashboard/SearchPanel.tsx",
+          "src/hooks/useLeadSearch.ts",
+          "supabase/functions/parse-prompt/index.ts",
+          "src/components/dashboard/SearchSuggestions.tsx"
+        ]
+      },
+      {
+        "name": "Lead Table View",
+        "description": "Virtualized table display with multi-select, scoring visualization, and bulk operations",
+        "files": [
+          "src/components/dashboard/VirtualizedLeadsTable.tsx",
+          "src/components/ui/virtualized-table.tsx",
+          "src/components/dashboard/BulkOperations.tsx"
+        ]
+      },
+      {
+        "name": "Kanban Board View",
+        "description": "Drag-and-drop lead pipeline management with status-based columns",
+        "files": [
+          "src/components/dashboard/BoardView.tsx"
+        ]
+      },
+      {
+        "name": "Lead Detail Panel",
+        "description": "Comprehensive lead information display with signals, notes, tags, and contact information",
+        "files": [
+          "src/components/dashboard/LeadDetailPanel.tsx",
+          "src/components/dashboard/ResizableLeadDetailDrawer.tsx"
+        ]
+      },
+      {
+        "name": "Lead Scoring System",
+        "description": "Multi-factor scoring algorithm with configurable profiles for ICP matching, pain signals, and reachability",
+        "files": [
+          "src/components/dashboard/LeadScoringProfiles.tsx",
+          "supabase/functions/search-leads/index.ts"
+        ]
+      },
+      {
+        "name": "Website Analysis",
+        "description": "Automated website scanning for technology detection, contact extraction, and signal identification",
+        "files": [
+          "src/hooks/useWebsiteAnalysis.ts",
+          "supabase/functions/analyze-website/index.ts",
+          "supabase/functions/lib/simple-website-analyzer.ts"
+        ]
+      },
+      {
+        "name": "AI Lead Insights",
+        "description": "AI-powered insights generation with personalized recommendations for lead engagement",
+        "files": [
+          "src/hooks/useAIInsights.ts",
+          "supabase/functions/generate-lead-insights/index.ts"
+        ]
+      },
+      {
+        "name": "Saved Searches",
+        "description": "Search query persistence with custom naming, tagging, and re-run capabilities",
+        "files": [
+          "src/components/dashboard/SavedSearchesTable.tsx",
+          "src/hooks/useSavedSearches.ts",
+          "src/hooks/useSearchNaming.ts"
+        ]
+      },
+      {
+        "name": "Search History",
+        "description": "Historical search tracking with analytics and performance metrics",
+        "files": [
+          "src/components/dashboard/SearchHistoryManager.tsx",
+          "src/components/dashboard/SearchAnalytics.tsx"
+        ]
+      },
+      {
+        "name": "Dashboard Home",
+        "description": "Main dashboard interface with search history, quick actions, and performance metrics",
+        "files": [
+          "src/components/dashboard/DashboardHome.tsx",
+          "src/pages/Index.tsx"
+        ]
+      },
+      {
+        "name": "Export System",
+        "description": "Multi-format data export with CSV, JSON, and styled Excel capabilities",
+        "files": [
+          "src/pages/Index.tsx"
+        ]
+      },
+      {
+        "name": "Advanced Filters",
+        "description": "Real-time lead filtering with complex filter combinations and search refinement",
+        "files": [
+          "src/components/dashboard/AdvancedFilters.tsx"
+        ]
+      },
+      {
+        "name": "Search State Management",
+        "description": "Centralized search state management with caching and optimization",
+        "files": [
+          "src/hooks/useSearchState.ts",
+          "src/hooks/useSearchCache.ts"
+        ]
+      },
+      {
+        "name": "Job Status Tracking",
+        "description": "Real-time search job progress tracking with status indicators",
+        "files": [
+          "src/components/ui/job-status-indicator.tsx",
+          "src/hooks/useSearchJobStatus.ts"
+        ]
+      },
+      {
+        "name": "Theme Management",
+        "description": "Light/dark mode support with system preference detection",
+        "files": [
+          "src/components/ThemeProvider.tsx"
+        ]
+      },
+      {
+        "name": "Lead Search Execution",
+        "description": "Backend search processing with Google Places API integration and batch processing",
+        "files": [
+          "supabase/functions/search-leads/index.ts",
+          "supabase/functions/get-search-results/index.ts"
+        ]
+      },
+      {
+        "name": "Recent Searches",
+        "description": "Quick access to recent search queries with re-run capability",
+        "files": [
+          "src/components/dashboard/RecentSearches.tsx"
+        ]
+      },
+      {
+        "name": "UI Component Library",
+        "description": "Reusable shadcn/ui components with Tailwind CSS styling",
+        "files": [
+          "src/components/ui/button.tsx",
+          "src/components/ui/card.tsx",
+          "src/components/ui/dialog.tsx",
+          "src/components/ui/input.tsx",
+          "src/components/ui/table.tsx",
+          "src/components/ui/tabs.tsx",
+          "src/components/ui/toast.tsx"
+        ]
+      },
+      {
+        "name": "Database Integration",
+        "description": "Supabase client configuration with auto-generated types and real-time subscriptions",
+        "files": [
+          "src/integrations/supabase/client.ts",
+          "src/integrations/supabase/types.ts"
+        ]
+      }
+    ]
+  }
+}

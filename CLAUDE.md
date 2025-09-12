@@ -2,131 +2,85 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
-
-This is a SMB Lead Finder application built with React, TypeScript, Vite, and Supabase. It's a Lovable-integrated project designed for finding and managing business leads with advanced search capabilities.
-
-## Key Technologies
-
-- **Frontend**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **UI Framework**: shadcn/ui components with Tailwind CSS
-- **Database/Backend**: Supabase (PostgreSQL with Edge Functions)
-- **State Management**: React Query (TanStack Query)
-- **Routing**: React Router v6
-- **Forms**: React Hook Form with Zod validation
-
 ## Development Commands
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server (port 8080)
-npm run dev
-
-# Build for production
-npm run build
-
-# Build for development mode
-npm run build:dev
-
-# Run linter
-npm run lint
-
-# Preview production build
-npm run preview
-
-# Development with file watching
-npm run dev:watch
-
-# Sync with Lovable
-npm run sync
-
-# Open in Cursor with watch mode
-npm run cursor
+npm run dev          # Start Vite dev server on port 8080
+npm run build        # Production build
+npm run build:dev    # Development build
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+npm run dev:watch    # Run dev server with file watcher
+npm run cursor       # Open in Cursor and start dev:watch
+npm run sync         # Run sync.sh script
 ```
 
-## Project Architecture
+## Architecture Overview
 
-### Core Application Structure
+### Tech Stack
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite with SWC
+- **UI Components**: shadcn/ui (Radix UI + Tailwind CSS)
+- **Styling**: Tailwind CSS with custom theme support
+- **State Management**: React Query (TanStack Query)
+- **Routing**: React Router v6
+- **Backend**: Supabase (PostgreSQL + Auth + Realtime)
+- **Form Handling**: React Hook Form with Zod validation
 
-- **Entry Point**: `src/main.tsx` - Bootstraps the React app
-- **Router**: `src/App.tsx` - Main app wrapper with routing, providers, and theme initialization
-- **Pages**: Located in `src/pages/`
-  - `Index.tsx` - Main dashboard with lead management interface
-  - `AuthPage.tsx` - Authentication handling
-  - `NotFound.tsx` - 404 page
+### Project Structure
+The application is a lead management/CRM system focused on SMB lead discovery and qualification:
 
-### Key Features & Components
+- **`src/pages/`**: Route components (Index, AuthPage, NotFound)
+- **`src/components/dashboard/`**: Core business components for lead management
+  - `SearchPanel`: Natural language lead search interface
+  - `VirtualizedLeadsTable`: Performance-optimized lead table with virtual scrolling
+  - `LeadDetailPanel`: Detailed lead view with signals and actions
+  - `BoardView`: Kanban-style lead pipeline view
+  - `SavedSearchesTable`: Manage and reuse search queries
+- **`src/components/ui/`**: Reusable shadcn components
+- **`src/hooks/`**: Custom React hooks for business logic
+  - `useLeadSearch`: Core search and lead management logic
+  - `useAuth`: Supabase authentication wrapper
+  - `useSearchState`: Search state management
+- **`src/integrations/supabase/`**: Database client and types (auto-generated)
 
-1. **Lead Management Dashboard** (`src/components/dashboard/`)
-   - `LeadsTable.tsx` - Table view for leads
-   - `BoardView.tsx` - Kanban-style board view
-   - `ResizableLeadDetailDrawer.tsx` - Detailed lead information panel
-   - `SearchPanel.tsx` - Advanced search interface with natural language processing
+### Key Features & Implementation Details
 
-2. **Search System**
-   - Natural language search parsing via Supabase Edge Function (`supabase/functions/parse-prompt/`)
-   - Search DSL generation and execution
-   - Saved searches with custom naming
-   - Search history and analytics tracking
+**Authentication Flow**: 
+- Managed via Supabase Auth with protected routes
+- Auth check happens in Index.tsx using useAuth hook
+- Redirects to /auth when not authenticated
 
-3. **Supabase Integration** (`src/integrations/supabase/`)
-   - Client configuration with auth and real-time subscriptions
-   - Edge Functions for:
-     - Website analysis (`analyze-website`)
-     - Lead insights generation (`generate-lead-insights`)
-     - Search functionality (`search-leads`, `parse-prompt`)
+**Lead Search System**:
+- Natural language prompt parsed into DSL (Domain Specific Language)
+- Search jobs tracked with progress states (parsing, queued, running, completed, failed)
+- Results cached and managed through useLeadSearch hook
+- Supports bulk operations on search results
 
-### Data Flow
+**Data Model**:
+- Lead entity contains business info, signals, scoring, tags, and notes
+- Signals provide insights about lead quality with override capability
+- Custom scoring profiles for lead qualification
 
-1. User enters natural language search → Parse via Edge Function → Generate DSL query
-2. Execute search against database → Return ranked results with scoring
-3. Results displayed in table/board view → User can interact with leads
-4. Lead interactions (status changes, notes, tags) → Update database in real-time
+**UI/UX Patterns**:
+- Resizable panels for lead detail view
+- Virtual scrolling for large datasets
+- Theme support (light/dark mode) via ThemeProvider
+- Toast notifications for user feedback
+- Responsive table/board view switching
 
-### Custom Hooks (`src/hooks/`)
+### Environment Configuration
+- Uses Vite environment variables
+- Supabase URL and keys are in `src/integrations/supabase/client.ts`
+- TypeScript path alias: `@/` maps to `./src/`
 
-- `useLeadSearch` - Main search functionality and lead operations
-- `useAuth` - Authentication state management
-- `useSavedSearches` - Manage saved search queries
-- `useAIInsights` - Generate AI-powered lead insights
-- `useWebsiteAnalysis` - Analyze lead websites for additional data
+### TypeScript Configuration
+- Relaxed type checking (noImplicitAny: false, strictNullChecks: false)
+- Allows JavaScript files
+- Uses project references for app and node configs
 
-## TypeScript Configuration
+### Testing
+No test framework is currently configured. The project has a test setup file at `src/test/setup.ts` but no active tests.
 
-The project uses relaxed TypeScript settings for rapid development:
-- `noImplicitAny: false`
-- `strictNullChecks: false`
-- `noUnusedLocals: false`
-- `noUnusedParameters: false`
-
-Path alias configured: `@/*` maps to `./src/*`
-
-## Styling Approach
-
-- Tailwind CSS for utility-first styling
-- shadcn/ui components for consistent UI patterns
-- CSS variables for theming (light/dark mode support)
-- Component-level styles using Tailwind classes
-
-## Database Schema
-
-Key tables (in Supabase):
-- `leads` - Business lead information
-- `saved_searches` - User's saved search queries
-- `search_jobs` - Search execution tracking
-- `lead_interactions` - Notes, tags, and status changes
-
-## Testing
-
-No test framework is currently configured. Consider adding Vitest or Jest if tests are needed.
-
-## Important Notes
-
-- Development server runs on port 8080 (IPv6 enabled)
-- Lovable integration for collaborative development
-- Theme defaults to light mode on initial load
-- All Supabase Edge Functions use Deno runtime
-- Authentication required for all main app features
+## Lovable Platform Integration
+This is a Lovable project with automatic deployment capabilities. Changes pushed to the repository are reflected in the Lovable platform at the project URL specified in README.md.
