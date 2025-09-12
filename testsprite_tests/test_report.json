@@ -1,0 +1,37 @@
+{
+  "totalTests": 6,
+  "passed": 4,
+  "failed": 2,
+  "tests": [
+    {
+      "name": "Homepage loads",
+      "status": "PASSED",
+      "details": "Title: Mothership Leads - AI-Powered SMB Lead Finder"
+    },
+    {
+      "name": "Authentication page exists",
+      "status": "PASSED",
+      "details": "Auth elements found"
+    },
+    {
+      "name": "Theme toggle exists",
+      "status": "FAILED",
+      "error": "No theme toggle found"
+    },
+    {
+      "name": "Responsive design",
+      "status": "PASSED",
+      "details": "All viewports tested"
+    },
+    {
+      "name": "Supabase connection",
+      "status": "FAILED",
+      "error": "No Supabase connection detected"
+    },
+    {
+      "name": "Performance metrics",
+      "status": "PASSED",
+      "details": "Page load time: 307ms"
+    }
+  ]
+}

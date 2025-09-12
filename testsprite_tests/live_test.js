@@ -1,5 +1,6 @@
 // Simple test script for live Lovable deployment
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
+import fs from 'fs';
 
 const LIVE_URL = 'https://mothership-hq.lovable.app';
 
@@ -98,15 +99,15 @@ async function runTests() {
     try {
       // Test mobile viewport
       await page.setViewport({ width: 375, height: 667 });
-      await page.waitForTimeout(1000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Test tablet viewport
       await page.setViewport({ width: 768, height: 1024 });
-      await page.waitForTimeout(1000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Test desktop viewport
       await page.setViewport({ width: 1920, height: 1080 });
-      await page.waitForTimeout(1000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       results.passed++;
       results.tests.push({ name: 'Responsive design', status: 'PASSED', details: 'All viewports tested' });
@@ -136,7 +137,7 @@ async function runTests() {
         const requests = [];
         page.on('request', request => requests.push(request.url()));
         await page.reload();
-        await page.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         const hasSupabaseRequests = requests.some(url => url.includes('supabase'));
         if (hasSupabaseRequests) {
@@ -203,7 +204,6 @@ async function runTests() {
 // Run tests
 runTests().then(results => {
   // Save results to file
-  const fs = require('fs');
   const reportPath = '/Users/russellteter/Desktop/mothership-hq/testsprite_tests/test_report.json';
   fs.writeFileSync(reportPath, JSON.stringify(results, null, 2));
   console.log(`\n📄 Test report saved to: ${reportPath}`);
