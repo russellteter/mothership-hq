@@ -105,7 +105,7 @@ const Index = () => {
     return null;
   }
 
-  const handleSearch = async (prompt: string) => {
+  const handleSearch = async (prompt: string, options?: { mode?: 'standard' | 'enriched_only'; limit?: number; enrichment_flags?: { gpt5?: boolean; render?: boolean; verify_contacts?: boolean } }) => {
     try {
       updateState('parsing', 'Understanding your request...', 10);
       
@@ -122,9 +122,9 @@ const Index = () => {
 
       updateState('queued', 'Search queued, starting soon...', 25);
 
-      // Start the search with original prompt for context
-      updateState('running', 'Finding leads...', 50);
-      await searchLeads(parseResult.dsl, prompt);
+      // Start the search (enriched-only or standard)
+      updateState('running', options?.mode === 'enriched_only' ? 'Finding enriched leads...' : 'Finding leads...', 50);
+      await searchLeads(parseResult.dsl, prompt, options);
       
       updateState('completed', 'Search completed successfully', 100);
       

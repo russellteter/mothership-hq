@@ -7,7 +7,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { SearchSuggestions } from './SearchSuggestions';
 
 interface SearchPanelProps {
-  onSearch: (prompt: string) => void;
+  onSearch: (prompt: string, options?: { mode?: 'standard' | 'enriched_only'; limit?: number; enrichment_flags?: { gpt5?: boolean; render?: boolean; verify_contacts?: boolean } }) => void;
   isSearching: boolean;
 }
 
@@ -22,6 +22,10 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [enrichedOnly, setEnrichedOnly] = useState(true);
+  const [limit, setLimit] = useState(10);
+  const [renderDom, setRenderDom] = useState(false);
+  const [verifyContacts, setVerifyContacts] = useState(true);
 
   const debouncedPrompt = useDebounce(prompt, 300);
   
@@ -30,12 +34,16 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
     if (debouncedPrompt.trim() && !isSubmitting && !isSearching) {
       setIsSubmitting(true);
       try {
-        await onSearch(debouncedPrompt);
+        await onSearch(debouncedPrompt, {
+          mode: enrichedOnly ? 'enriched_only' : 'standard',
+          limit: Math.min(Math.max(limit, 1), 20),
+          enrichment_flags: enrichedOnly ? { gpt5: true, render: renderDom, verify_contacts: verifyContacts } : undefined
+        });
       } finally {
         setIsSubmitting(false);
       }
     }
-  }, [debouncedPrompt, onSearch, isSubmitting, isSearching]);
+  }, [debouncedPrompt, onSearch, isSubmitting, isSearching, enrichedOnly, limit, renderDom, verifyContacts]);
 
   const handleExampleClick = useCallback((example: string) => {
     if (!isSearching && !isSubmitting) {
@@ -116,6 +124,33 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
         <div className="space-y-4 border-t border-border pt-4">
           <h3 className="text-sm font-medium text-foreground">Advanced Options</h3>
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-border"
+                  checked={enrichedOnly}
+                  onChange={(e) => setEnrichedOnly(e.target.checked)}
+                  disabled={isSearching || isSubmitting}
+                />
+                Return enriched leads only (max 20)
+              </label>
+              {enrichedOnly && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground">Limit</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={limit}
+                    onChange={(e) => setLimit(Number(e.target.value))}
+                    className="w-16 px-2 py-1 bg-background border border-border rounded-md text-xs"
+                    disabled={isSearching || isSubmitting}
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="text-xs font-medium text-muted-foreground">Industry</label>
               <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
@@ -139,13 +174,17 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
             </div>
             
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Result Limit</label>
-              <select className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-sm">
-                <option value="50">50 leads</option>
-                <option value="100">100 leads</option>
-                <option value="250" defaultValue="250">250 leads</option>
-                <option value="500">500 leads</option>
-              </select>
+              <label className="text-xs font-medium text-muted-foreground">Rendering & Verification</label>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input type="checkbox" className="rounded border-border" checked={renderDom} onChange={(e) => setRenderDom(e.target.checked)} disabled={!enrichedOnly || isSearching || isSubmitting} />
+                  <span>Use rendered DOM for feature checks</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input type="checkbox" className="rounded border-border" checked={verifyContacts} onChange={(e) => setVerifyContacts(e.target.checked)} disabled={!enrichedOnly || isSearching || isSubmitting} />
+                  <span>Verify contacts</span>
+                </label>
+              </div>
             </div>
             
             <div className="pt-2 border-t border-border">
