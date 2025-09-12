@@ -12,7 +12,7 @@ export function PlacesAutocomplete() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
     script.onload = () => {
-      const autocomplete = new google.maps.places.Autocomplete(inputRef.current!, {
+      const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current!, {
         types: ['establishment'],
         componentRestrictions: { country: 'us' }
       });
