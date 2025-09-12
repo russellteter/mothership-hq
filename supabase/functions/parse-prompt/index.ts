@@ -330,18 +330,26 @@ IMPORTANT RULES:
 4. Include warnings for any ambiguities or assumptions
 5. Support complex queries with multiple constraints
 6. Recognize industry-specific terminology
+7. CRITICAL: All 'vertical' values MUST be lowercase from this list: dentist, law_firm, contractor, hvac, roofing, restaurant, retail, healthcare, fitness, beauty, automotive, real_estate, insurance, financial, generic
 
 When parsing:
-- Extract business type/vertical from context
+- Extract business type/vertical from context (MUST be lowercase: roofing NOT Roofing)
 - Parse location carefully (city, state, radius)
+- State MUST be a valid 2-letter US state abbreviation (e.g., SC, TX, CA)
+- If an invalid state is provided, try to infer the correct one (e.g., "BO" might mean SC for Charleston)
 - Identify all constraints (must have, nice to have, exclude)
 - Detect special requirements (owner info, franchise status, etc.)
 - Set appropriate result size based on query intent
 - Choose optimal scoring profile for the use case
 
+Valid verticals (use exactly as shown, all lowercase):
+- dentist, law_firm, contractor, hvac, roofing
+- restaurant, retail, healthcare, fitness, beauty
+- automotive, real_estate, insurance, financial, generic
+
 Return JSON with structure:
 {
-  "dsl": { ...LeadQuery object },
+  "dsl": { ...LeadQuery object with lowercase vertical },
   "warnings": [...any warnings or assumptions],
   "confidence": 0.0-1.0,
   "alternatives": [...alternative interpretations if ambiguous]
@@ -422,6 +430,39 @@ Output valid JSON with 'dsl', 'warnings', 'confidence', and optionally 'alternat
         warnings: ['LLM parsing failed, using pattern-based extraction'],
         confidence: 0.6
       };
+    }
+
+    // Post-process to ensure correct formatting
+    if (parsedResult.dsl) {
+      // Force vertical to lowercase
+      if (parsedResult.dsl.vertical && typeof parsedResult.dsl.vertical === 'string') {
+        parsedResult.dsl.vertical = parsedResult.dsl.vertical.toLowerCase();
+      }
+      
+      // Validate and fix state abbreviation
+      if (parsedResult.dsl.geo?.state) {
+        const state = parsedResult.dsl.geo.state.toUpperCase();
+        // Common mistyped states
+        const stateCorrections: Record<string, string> = {
+          'BO': 'SC', // Charleston is in SC
+          'SO': 'SC',
+          'SG': 'SC',
+          'TC': 'TX', // Texas
+          'TS': 'TX',
+          'DA': 'TX', // Dallas is in TX
+        };
+        
+        if (stateCorrections[state]) {
+          parsedResult.dsl.geo.state = stateCorrections[state];
+          parsedResult.warnings = parsedResult.warnings || [];
+          parsedResult.warnings.push(`Corrected state from ${state} to ${stateCorrections[state]}`);
+        } else if (state.length !== 2) {
+          // Try to match to full state name
+          parsedResult.dsl.geo.state = state.substring(0, 2).toUpperCase();
+        } else {
+          parsedResult.dsl.geo.state = state;
+        }
+      }
     }
 
     // Validate with Zod
