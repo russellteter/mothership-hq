@@ -119,6 +119,12 @@ export interface Lead {
   people: Person[];
   signal_details: Signal[];
   notes: Note[];
+  // Enrichment fields (optional, present in enriched-only mode)
+  confidence_score?: number;
+  detected_features?: Record<string, any>;
+  verified_contacts?: Array<Record<string, any>>;
+  enrichment_data?: Record<string, any>;
+  evidence_log?: EvidenceEntry[];
 }
 
 export interface Note {
@@ -148,4 +154,16 @@ export interface SearchJob {
 export interface ParseResult {
   dsl: LeadQuery;
   warnings: string[];
+}
+
+// Evidence logging structure for enrichment
+export interface EvidenceEntry {
+  timestamp: string;
+  check_type: 'website' | 'booking' | 'contact' | 'social';
+  source: 'gmb' | 'serp' | 'dom' | 'api';
+  url?: string;
+  selector?: string;
+  snippet?: string;
+  status: 'found' | 'not_found' | 'error';
+  confidence: number; // 0-1
 }

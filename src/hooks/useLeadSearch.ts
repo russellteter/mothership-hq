@@ -5,6 +5,18 @@ import { toast } from '@/hooks/use-toast';
 import { generateSearchName, generateSearchTags, categorizeLeadType } from './useSearchNaming';
 import { useSearchCache, useRecentSearches } from './useSearchCache';
 
+interface EnrichmentFlags {
+  gpt5?: boolean;
+  render?: boolean;
+  verify_contacts?: boolean;
+}
+
+interface SearchOptions {
+  mode?: 'standard' | 'enriched_only';
+  enrichment_flags?: EnrichmentFlags;
+  limit?: number; // server enforces max 20
+}
+
 export function useLeadSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Lead[]>([]);
@@ -30,7 +42,7 @@ export function useLeadSearch() {
     }
   };
 
-  const searchLeads = useCallback(async (dsl: LeadQuery, originalPrompt?: string): Promise<void> => {
+  const searchLeads = useCallback(async (dsl: LeadQuery, originalPrompt?: string, options?: SearchOptions): Promise<void> => {
     // Check cache first
     const cached = getCachedResults(dsl);
     if (cached) {
@@ -92,16 +104,28 @@ export function useLeadSearch() {
       const searchTags = generateSearchTags(dsl);
       const leadType = categorizeLeadType(dsl);
       
-      // Start the search job with auth token and metadata
-      const { data, error } = await supabase.functions.invoke('search-leads', {
-        body: { 
-          dsl,
-          original_prompt: originalPrompt,
-          custom_name: searchName,
-          search_tags: searchTags,
-          lead_type: leadType,
-          scoring_weights: (dsl as any).scoring_weights // Pass scoring weights if provided
-        },
+      const isEnrichedOnly = options?.mode === 'enriched_only';
+      const functionName = isEnrichedOnly ? 'search-enriched-leads' : 'search-leads';
+      const requestBody: any = isEnrichedOnly ? {
+        dsl_json: dsl,
+        original_prompt: originalPrompt,
+        options: options?.enrichment_flags,
+        limit: Math.min(options?.limit || 20, 20),
+        custom_name: searchName,
+        search_tags: searchTags,
+        lead_type: leadType
+      } : {
+        dsl,
+        original_prompt: originalPrompt,
+        custom_name: searchName,
+        search_tags: searchTags,
+        lead_type: leadType,
+        scoring_weights: (dsl as any).scoring_weights
+      };
+
+      // Start the appropriate search job
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: requestBody,
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -121,7 +145,11 @@ export function useLeadSearch() {
       });
 
       // Poll for results
-      await pollForResults(jobId);
+      if (isEnrichedOnly) {
+        await pollForEnrichedResults(jobId);
+      } else {
+        await pollForResults(jobId);
+      }
       
     } catch (error) {
       console.error('Search error:', error);
@@ -205,6 +233,59 @@ export function useLeadSearch() {
         
       } catch (error) {
         console.error('Poll error:', error);
+        throw error;
+      }
+    };
+
+    await poll();
+  };
+
+  // Poller for enriched-only jobs
+  const pollForEnrichedResults = async (jobId: string): Promise<void> => {
+    const maxAttempts = 90; // 7.5 minutes
+    let attempts = 0;
+
+    const poll = async (): Promise<void> => {
+      if (attempts >= maxAttempts) {
+        throw new Error('Enriched search timeout');
+      }
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Authentication session expired. Please sign in again.');
+        }
+
+        const { data: resultData, error } = await supabase.functions.invoke('get-search-results', {
+          body: { search_job_id: jobId },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+
+        if (error) {
+          throw new Error('Failed to fetch results');
+        }
+
+        if (resultData.search_job.status === 'completed') {
+          // expect enriched leads only
+          setSearchResults(resultData.leads);
+          setCurrentSearchJob(resultData.search_job);
+          toast({
+            title: "Enriched Search Completed",
+            description: `Returned ${resultData.leads.length} enriched leads`
+          });
+          return;
+        }
+
+        if (resultData.search_job.status === 'failed') {
+          throw new Error(resultData.search_job.error_text || 'Enriched search failed');
+        }
+
+        attempts++;
+        setTimeout(poll, 5000);
+      } catch (error) {
+        console.error('Poll enriched results error:', error);
         throw error;
       }
     };
