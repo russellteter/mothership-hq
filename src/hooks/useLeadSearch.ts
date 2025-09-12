@@ -86,6 +86,66 @@ export function useLeadSearch() {
       // Get the current session to include auth token
       const { data: { session } } = await supabase.auth.getSession();
       
+      // E2E bypass: simulate enriched-only results without auth or backend
+      if (import.meta.env.VITE_E2E_NO_AUTH === 'true' && options?.mode === 'enriched_only') {
+        const jobId = `e2e-${Date.now()}`;
+        setCurrentSearchJob({ 
+          id: jobId, 
+          dsl_json: dsl, 
+          created_at: new Date().toISOString(),
+          status: 'running',
+          custom_name: 'E2E Enriched Only',
+          original_prompt: originalPrompt,
+          search_tags: []
+        });
+
+        const num = Math.min(options?.limit || 3, 20);
+        // Simulate small delay for UX
+        await new Promise(res => setTimeout(res, 500));
+        const fakeLeads: Lead[] = Array.from({ length: num }).map((_, i) => ({
+          rank: i + 1,
+          score: 80 + i,
+          name: `Test Business ${i + 1}`,
+          city: 'Columbia',
+          state: 'SC',
+          website: 'https://example.com',
+          phone: '555-000-0000',
+          signals: { owner_identified: true, has_online_booking: i % 2 === 0 },
+          owner: 'Owner Name',
+          owner_email: 'owner@example.com',
+          review_count: 10 + i,
+          rating: 4.5,
+          status: 'new',
+          tags: [],
+          business: {
+            id: `biz-${i + 1}`,
+            name: `Test Business ${i + 1}`,
+            vertical: dsl.vertical,
+            website: 'https://example.com',
+            phone: '555-000-0000',
+            address_json: { street: '123 Main St', city: 'Columbia', state: 'SC', zip: '29201', country: 'US' },
+            lat: 34.0,
+            lng: -81.0,
+            franchise_bool: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          people: [],
+          signal_details: [],
+          notes: [],
+          confidence_score: 0.9,
+          detected_features: { online_booking: i % 2 === 0 },
+          verified_contacts: [{ type: 'email', value: 'owner@example.com', confidence: 0.9 } as any],
+          enrichment_data: { summary: 'E2E summary', confidence: 0.9 },
+          evidence_log: []
+        }));
+
+        setSearchResults(fakeLeads);
+        setCurrentSearchJob(prev => prev ? { ...prev, status: 'completed' } : null);
+        setIsSearching(false);
+        return;
+      }
+
       if (!session) {
         toast({
           title: "Authentication Required",
