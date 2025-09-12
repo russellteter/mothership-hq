@@ -41,7 +41,7 @@ const LeadQuerySchema = z.object({
   version: z.literal(1),
   vertical: z.enum(['dentist', 'law_firm', 'contractor', 'hvac', 'roofing', 
                      'restaurant', 'retail', 'healthcare', 'fitness', 'beauty', 
-                     'automotive', 'real_estate', 'insurance', 'financial', 'generic']),
+                     'automotive', 'real_estate', 'insurance', 'financial', 'generic']).transform(val => val.toLowerCase()),
   geo: z.object({
     city: z.string().min(1),
     state: z.string().length(2).toUpperCase(),
@@ -197,9 +197,21 @@ async function validateAndGeocodeLocation(location: string): Promise<{
   // If no pattern matches, try to make an educated guess
   const parts = location.split(/[,\s]+/);
   if (parts.length >= 2) {
-    const state = parts[parts.length - 1];
-    const city = parts.slice(0, -1).join(' ');
-    return { city, state: state.substring(0, 2).toUpperCase() };
+    const lastPart = parts[parts.length - 1].trim();
+    const city = parts.slice(0, -1).join(' ').trim();
+    
+    // Handle common typos and variations
+    const stateMappings: Record<string, string> = {
+      'BO': 'SC', // Charleston, BO -> Charleston, SC
+      'SC': 'SC',
+      'TX': 'TX',
+      'GA': 'GA',
+      'FL': 'FL',
+      'NC': 'NC'
+    };
+    
+    const state = stateMappings[lastPart.toUpperCase()] || lastPart.substring(0, 2).toUpperCase();
+    return { city, state };
   }
   
   // Special case for single-word major cities

@@ -345,6 +345,7 @@ export type Database = {
           dsl_json: Json
           error_text: string | null
           id: string
+          lead_type: string | null
           original_prompt: string | null
           search_tags: Json | null
           status: string
@@ -358,6 +359,7 @@ export type Database = {
           dsl_json: Json
           error_text?: string | null
           id?: string
+          lead_type?: string | null
           original_prompt?: string | null
           search_tags?: Json | null
           status?: string
@@ -371,6 +373,7 @@ export type Database = {
           dsl_json?: Json
           error_text?: string | null
           id?: string
+          lead_type?: string | null
           original_prompt?: string | null
           search_tags?: Json | null
           status?: string
@@ -461,19 +464,34 @@ export type Database = {
           business_id: string
           changed_at: string
           id: string
+          message: string | null
+          search_job_id: string | null
+          severity: string | null
           status: string
+          task: string | null
+          ts: string | null
         }
         Insert: {
           business_id: string
           changed_at?: string
           id?: string
+          message?: string | null
+          search_job_id?: string | null
+          severity?: string | null
           status: string
+          task?: string | null
+          ts?: string | null
         }
         Update: {
           business_id?: string
           changed_at?: string
           id?: string
+          message?: string | null
+          search_job_id?: string | null
+          severity?: string | null
           status?: string
+          task?: string | null
+          ts?: string | null
         }
         Relationships: [
           {
