@@ -1,0 +1,5 @@
+This is a Lovable + Cursor integraanges made in Cursor (feature/* branches)
+- Always preserve Tailwind classes from Lovable
+- Use TypeScript for all new code
+- Follow existing component patterns
+- Auto-sync is enabled every 2 minutes

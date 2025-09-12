@@ -99,7 +99,8 @@ export function useLeadSearch() {
           original_prompt: originalPrompt,
           custom_name: searchName,
           search_tags: searchTags,
-          lead_type: leadType
+          lead_type: leadType,
+          scoring_weights: (dsl as any).scoring_weights // Pass scoring weights if provided
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`

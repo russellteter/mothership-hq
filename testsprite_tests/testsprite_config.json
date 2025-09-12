@@ -1,0 +1,10 @@
+{
+  "projectName": "mothership-hq",
+  "projectPath": "/Users/russellteter/Desktop/mothership-hq",
+  "liveUrl": "https://mothership-hq.lovable.app",
+  "testType": "frontend",
+  "testScope": "codebase",
+  "needLogin": true,
+  "testEnvironment": "production",
+  "additionalInstructions": "Test the SMB Lead Finder application including authentication, search functionality, lead management, and data export features"
+}
