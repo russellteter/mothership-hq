@@ -273,16 +273,17 @@ export class APIClient {
 
   // Mock channel functionality for real-time subscriptions
   channel(name: string) {
-    return {
+    const channelObj = {
       on: (event: string, config: any, callback: (payload: any) => void) => {
-        // Mock real-time updates
-        return this;
+        // Mock real-time updates - return the channel object to allow chaining
+        return channelObj;
       },
       subscribe: () => {
         // Mock subscription
         return Promise.resolve();
       },
     };
+    return channelObj;
   }
 
   removeChannel(channel: any) {
