@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { Lead, LeadQuery, ParseResult, SearchJob } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
 import { generateSearchName, generateSearchTags, categorizeLeadType } from './useSearchNaming';
@@ -30,12 +30,7 @@ export function useLeadSearch() {
 
   const parsePrompt = async (prompt: string): Promise<ParseResult> => {
     try {
-      const { data, error } = await supabase.functions.invoke('parse-prompt', {
-        body: { prompt }
-      });
-
-      if (error) throw error;
-      return data;
+      return await api.parsePrompt(prompt);
     } catch (error) {
       console.error('Parse prompt error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -90,8 +85,8 @@ export function useLeadSearch() {
     abortControllerRef.current = new AbortController();
     
     try {
-      // Get the current session to include auth token
-      const { data: { session } } = await supabase.auth.getSession();
+      // For now, skip auth since we're migrating away from Supabase
+      // const { data: { session } } = await supabase.auth.getSession();
       
       // E2E bypass: simulate enriched-only results without auth or backend
       if (import.meta.env.VITE_E2E_NO_AUTH === 'true' && options?.mode === 'enriched_only') {
@@ -153,18 +148,19 @@ export function useLeadSearch() {
         return;
       }
 
-      if (!session) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to search for leads. You'll be redirected to the login page.",
-          variant: "destructive"
-        });
-        // Redirect to auth page after a short delay
-        setTimeout(() => {
-          window.location.href = '/auth';
-        }, 2000);
-        return;
-      }
+      // Skip auth check during migration
+      // if (!session) {
+      //   toast({
+      //     title: "Authentication Required",
+      //     description: "Please sign in to search for leads. You'll be redirected to the login page.",
+      //     variant: "destructive"
+      //   });
+      //   // Redirect to auth page after a short delay
+      //   setTimeout(() => {
+      //     window.location.href = '/auth';
+      //   }, 2000);
+      //   return;
+      // }
       
       // Generate enhanced search metadata
       const searchName = generateSearchName(dsl, originalPrompt);
@@ -190,21 +186,17 @@ export function useLeadSearch() {
         scoring_weights: (dsl as any).scoring_weights
       };
 
-      // Start the appropriate search job
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: requestBody,
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+      // Start search job using new API
+      const data = await api.searchLeads({
+        dsl,
+        original_prompt: originalPrompt,
+        custom_name: searchName,
+        search_tags: searchTags,
+        lead_type: leadType
       });
-
-      if (error) {
-        console.error('Edge Function error:', error);
-        throw error;
-      }
       
       if (!data || !data.job_id) {
-        console.error('Invalid response from Edge Function:', data);
+        console.error('Invalid response from API:', data);
         throw new Error('Invalid response from search service - no job ID returned');
       }
 
@@ -313,24 +305,8 @@ export function useLeadSearch() {
       }
 
       try {
-        // Get current session for auth
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          throw new Error('Authentication session expired. Please sign in again.');
-        }
-        
-        // Use the Supabase client instead of direct fetch
-        const { data: resultData, error } = await supabase.functions.invoke('get-search-results', {
-          body: { search_job_id: jobId },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
-          }
-        });
-
-        if (error) {
-          throw new Error('Failed to fetch results');
-        }
+        // Use new API to get search results
+        const resultData = await api.getSearchResults(jobId);
 
         
         if (resultData.search_job.status === 'completed') {
@@ -375,10 +351,7 @@ export function useLeadSearch() {
       }
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error('Authentication session expired. Please sign in again.');
-        }
+        // Skip auth check during migration
 
         const { data: resultData, error } = await supabase.functions.invoke('get-search-results', {
           body: { search_job_id: jobId },
