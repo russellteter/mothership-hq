@@ -14,9 +14,44 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Franchise detection based on business name and types
+function detectFranchise(place: any): boolean {
+  const businessName = (place.displayName?.text || place.displayName || '').toLowerCase();
+  const businessTypes = place.types || [];
+  
+  // Common franchise indicators in business names
+  const franchiseKeywords = [
+    'mcdonald', 'subway', 'starbucks', 'kfc', 'burger king', 'pizza hut',
+    'domino', 'papa john', 'dunkin', 'taco bell', 'chipotle', 'wendy',
+    'dairy queen', 'sonic', 'popeye', 'chick-fil-a', 'applebee', 'ihop',
+    'denny', 'olive garden', 'red lobster', 'outback', 'chili', 'tgif',
+    'marriott', 'hilton', 'holiday inn', 'best western', 'comfort inn',
+    'hampton inn', 'la quinta', 'motel 6', 'super 8', 'days inn',
+    'jiffy lube', 'valvoline', 'midas', 'firestone', 'goodyear',
+    'autozone', 'advance auto', 'pep boys', 'napa auto'
+  ];
+  
+  // Check if business name contains franchise keywords
+  for (const keyword of franchiseKeywords) {
+    if (businessName.includes(keyword)) {
+      return true;
+    }
+  }
+  
+  // Check for chain indicators in business types
+  const chainTypes = ['chain', 'franchise', 'corporate'];
+  for (const type of businessTypes) {
+    if (chainTypes.some(chainType => type.toLowerCase().includes(chainType))) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 // Enhanced search pipeline orchestrator
 // This function coordinates the GPT-5 reasoning + Google Places verification pipeline
-async function orchestrateEnhancedSearch(userQuery: string, enrichmentFlags: any): Promise<any> {
+async function orchestrateEnhancedSearch(user_query: string, enrichment_flags: any): Promise<any> {
   const results = {
     plan: null,
     places_data: [],
@@ -28,7 +63,7 @@ async function orchestrateEnhancedSearch(userQuery: string, enrichmentFlags: any
   };
 
   try {
-    console.log('Starting enhanced search pipeline for:', userQuery);
+    console.log('Starting enhanced search pipeline for:', user_query);
     
     // Step 1: GPT-5 Planning (reasoning effort: low)
     console.log('Step 1: GPT-5 Planning');
@@ -41,7 +76,7 @@ async function orchestrateEnhancedSearch(userQuery: string, enrichmentFlags: any
           'apikey': supabaseKey
         },
         body: JSON.stringify({
-          userQuery,
+          userQuery: user_query,
           operation: 'plan'
         })
       });
@@ -62,7 +97,7 @@ async function orchestrateEnhancedSearch(userQuery: string, enrichmentFlags: any
     console.log('Step 2: Google Places Text Search');
     if (results.plan && googleMapsApiKey) {
       try {
-        const placesQuery = results.plan.places_queries?.[0] || userQuery;
+        const placesQuery = results.plan.places_queries?.[0] || user_query;
         const placesResponse = await fetch(`${supabaseUrl}/functions/v1/google-places-enhanced`, {
           method: 'POST',
           headers: {
@@ -134,7 +169,7 @@ async function orchestrateEnhancedSearch(userQuery: string, enrichmentFlags: any
           }
         }
 
-        // Create lead object with enhanced data
+        // Create lead object with enhanced data (aligned with LeadScoringInput interface)
         const leadData = {
           business_name: place.displayName?.text || place.displayName || '',
           website_url: websiteUrl || '',
@@ -142,10 +177,19 @@ async function orchestrateEnhancedSearch(userQuery: string, enrichmentFlags: any
           detected_features: auditResult?.detected_features || {},
           rating: place.rating,
           user_rating_count: place.userRatingCount,
-          address: place.formattedAddress || '',
-          phone: place.nationalPhoneNumber || '',
-          google_maps_uri: place.googleMapsUri || '',
+          // Add people array for contact scoring (derived from business owner patterns)
+          people: place.nationalPhoneNumber ? [{
+            name: place.displayName?.text || place.displayName || '',
+            role: 'owner', // Assume owner for single proprietor businesses
+            phone: place.nationalPhoneNumber,
+            verified: true // Google Places provides verified contact info
+          }] : [],
+          // Add franchise detection based on business types and name patterns
+          franchise_bool: detectFranchise(place),
           evidence_log: auditResult?.evidence_log || [],
+          // Keep additional data for reference (lead-scorer will ignore these)
+          address: place.formattedAddress || '',
+          google_maps_uri: place.googleMapsUri || '',
           places_api_data: place,
           website_audit_data: auditResult
         };
@@ -183,7 +227,7 @@ async function orchestrateEnhancedSearch(userQuery: string, enrichmentFlags: any
 
     // Step 4: GPT-5 Synthesis (reasoning effort: medium)
     console.log('Step 4: GPT-5 Synthesis');
-    if (enrichmentFlags.gpt5 && results.leads.length > 0) {
+    if (enrichment_flags.gpt5 && results.leads.length > 0) {
       try {
         const synthesisResponse = await fetch(`${supabaseUrl}/functions/v1/gpt5-planner`, {
           method: 'POST',
@@ -233,18 +277,37 @@ serve(async (req) => {
   try {
     const { user_query, enrichment_flags = {} } = await req.json();
 
-    if (!user_query) {
+    if (!user_query || typeof user_query !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'user_query is required' }),
+        JSON.stringify({ 
+          error: 'user_query is required and must be a string',
+          received_type: typeof user_query
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    if (enrichment_flags && typeof enrichment_flags !== 'object') {
+      return new Response(
+        JSON.stringify({ 
+          error: 'enrichment_flags must be an object if provided',
+          received_type: typeof enrichment_flags
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Enhanced search pipeline starting with:', { user_query, enrichment_flags });
     const results = await orchestrateEnhancedSearch(user_query, enrichment_flags);
+    console.log('Enhanced search pipeline completed:', { 
+      pipeline_success: results.pipeline_success, 
+      leads_count: results.leads.length,
+      errors_count: results.errors.length
+    });
 
     return new Response(
       JSON.stringify({
-        success: results.pipeline_success,
+        pipeline_success: results.pipeline_success,
         leads: results.leads,
         plan: results.plan,
         synthesis: results.synthesis,

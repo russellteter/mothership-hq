@@ -371,8 +371,19 @@ Return JSON with structure:
 // GPT-5 Enhanced Pipeline Integration
 async function callGPT5Pipeline(userQuery: string, enrichmentFlags: any): Promise<any> {
   try {
-    // Call GPT-5 planner for initial planning
-    const plannerResponse = await fetch(`${supabaseUrl}/functions/v1/gpt5-planner`, {
+    // Call enhanced-search-pipeline which orchestrates the full GPT-5 flow
+    console.log('Calling enhanced search pipeline with GPT-5 reasoning...');
+    console.log('Request payload:', {
+      user_query: userQuery,
+      enrichment_flags: {
+        ...enrichmentFlags,
+        gpt5: true,
+        render: true,
+        verify_contacts: true
+      }
+    });
+    
+    const pipelineResponse = await fetch(`${supabaseUrl}/functions/v1/enhanced-search-pipeline`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${supabaseKey}`,
@@ -380,26 +391,47 @@ async function callGPT5Pipeline(userQuery: string, enrichmentFlags: any): Promis
         'apikey': supabaseKey
       },
       body: JSON.stringify({
-        userQuery,
-        operation: 'plan'
+        user_query: userQuery,
+        enrichment_flags: {
+          ...enrichmentFlags,
+          gpt5: true,
+          render: true,
+          verify_contacts: true
+        }
       })
     });
 
-    if (!plannerResponse.ok) {
-      throw new Error(`GPT-5 planner failed: ${plannerResponse.status}`);
+    if (!pipelineResponse.ok) {
+      const errorText = await pipelineResponse.text();
+      console.error('Enhanced pipeline failed:', {
+        status: pipelineResponse.status,
+        statusText: pipelineResponse.statusText,
+        body: errorText
+      });
+      throw new Error(`Enhanced search pipeline failed: ${pipelineResponse.status} - ${errorText}`);
     }
 
-    const { plan } = await plannerResponse.json();
-    console.log('GPT-5 plan generated:', plan);
+    const pipelineResult = await pipelineResponse.json();
+    console.log('Enhanced pipeline result:', {
+      pipeline_success: pipelineResult.pipeline_success,
+      leads_count: pipelineResult.leads?.length,
+      plan_available: !!pipelineResult.plan,
+      synthesis_available: !!pipelineResult.synthesis,
+      metadata: pipelineResult.metadata
+    });
 
-    // Use plan to enhance the DSL with evidence-based approach
+    // Extract plan and leads for DSL enhancement
     return {
-      enhanced_dsl: plan,
+      enhanced_dsl: pipelineResult.plan,
+      leads_preview: pipelineResult.leads?.slice(0, 3), // Preview of top leads
+      pipeline_success: pipelineResult.pipeline_success,
       gpt5_enabled: true,
-      planning_success: true
+      planning_success: pipelineResult.pipeline_success || false,
+      synthesis: pipelineResult.synthesis,
+      metadata: pipelineResult.metadata
     };
   } catch (error) {
-    console.error('GPT-5 pipeline error:', error);
+    console.error('Enhanced pipeline error:', error);
     return {
       gpt5_enabled: false,
       planning_success: false,
@@ -425,14 +457,30 @@ serve(async (req) => {
 
     console.log('Enhanced parsing for prompt:', prompt);
     console.log('Enrichment flags:', enrichment_flags);
+    console.log('Using GPT-5 pipeline:', enrichment_flags.gpt5 === true);
 
     // Check if GPT-5 pipeline is requested
     const useGPT5Pipeline = enrichment_flags.gpt5 === true;
-    let gpt5Enhancement = null;
+    let gpt5Enhancement: any = null;
     
     if (useGPT5Pipeline) {
       console.log('Using GPT-5 reasoning pipeline');
-      gpt5Enhancement = await callGPT5Pipeline(prompt, enrichment_flags);
+      try {
+        gpt5Enhancement = await callGPT5Pipeline(prompt, enrichment_flags);
+        console.log('GPT-5 enhancement result:', {
+          pipeline_success: gpt5Enhancement?.pipeline_success,
+          planning_success: gpt5Enhancement?.planning_success,
+          leads_count: gpt5Enhancement?.leads_preview?.length,
+          error: gpt5Enhancement?.error
+        });
+      } catch (error) {
+        console.error('GPT-5 pipeline failed:', error);
+        gpt5Enhancement = {
+          gpt5_enabled: false,
+          planning_success: false,
+          error: (error as Error).message
+        };
+      }
     }
 
     // Extract basic patterns using regex
@@ -554,10 +602,15 @@ Output valid JSON with 'dsl', 'warnings', 'confidence', and optionally 'alternat
     };
 
     // If GPT-5 enhancement was successful, merge the enhanced planning
-    if (gpt5Enhancement?.planning_success && gpt5Enhancement.enhanced_dsl) {
+    if (gpt5Enhancement && gpt5Enhancement.pipeline_success && gpt5Enhancement.enhanced_dsl) {
       parsedResult.gpt5_plan = gpt5Enhancement.enhanced_dsl;
+      parsedResult.leads_preview = gpt5Enhancement.leads_preview;
+      parsedResult.synthesis = gpt5Enhancement.synthesis;
       parsedResult.warnings = parsedResult.warnings || [];
       parsedResult.warnings.push('Enhanced with GPT-5 reasoning and Google Places verification pipeline');
+    } else if (gpt5Enhancement && gpt5Enhancement.error) {
+      parsedResult.warnings = parsedResult.warnings || [];
+      parsedResult.warnings.push(`GPT-5 pipeline error: ${gpt5Enhancement.error}`);
     }
 
     console.log('Enhanced parse result:', parsedResult);

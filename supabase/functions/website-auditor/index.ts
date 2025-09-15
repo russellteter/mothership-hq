@@ -365,32 +365,64 @@ async function auditWebsiteFeatures(websiteUrl: string, pathsToCheck?: string[])
   }
 
   // Add negative evidence if features not found (requirement: ≥2 negatives for absence claims)
-  if (!onlineBookingFound && pathsToAudit.length >= 2) {
-    const negativeBookingEvidence: EvidenceEntry = {
-      timestamp: auditTimestamp,
-      check_type: 'booking',
-      source: 'dom',
-      url: normalizedUrl,
-      status: 'not_found',
-      confidence: 0.9,
-      snippet: `No booking functionality detected across ${pathsToAudit.length} pages`
-    };
-    bookingEvidence.push(negativeBookingEvidence);
-    evidenceLog.push(negativeBookingEvidence);
+  // Enforce ≥2 negative evidence entries for high-confidence absence claims
+  if (!onlineBookingFound) {
+    const successfulPageChecks = evidenceLog.filter(e => e.status !== 'error' && e.check_type === 'website').length;
+    if (successfulPageChecks >= 2) {
+      const negativeBookingEvidence: EvidenceEntry = {
+        timestamp: auditTimestamp,
+        check_type: 'booking',
+        source: 'dom',
+        url: normalizedUrl,
+        status: 'not_found',
+        confidence: 0.95, // High confidence with ≥2 checks
+        snippet: `No booking functionality detected across ${successfulPageChecks} successfully checked pages`
+      };
+      bookingEvidence.push(negativeBookingEvidence);
+      evidenceLog.push(negativeBookingEvidence);
+    } else {
+      // Lower confidence if insufficient evidence
+      const lowConfidenceEvidence: EvidenceEntry = {
+        timestamp: auditTimestamp,
+        check_type: 'booking',
+        source: 'dom',
+        url: normalizedUrl,
+        status: 'not_found',
+        confidence: 0.6, // Lower confidence with <2 checks
+        snippet: `Limited evidence: only ${successfulPageChecks} pages successfully checked`
+      };
+      bookingEvidence.push(lowConfidenceEvidence);
+      evidenceLog.push(lowConfidenceEvidence);
+    }
   }
 
-  if (!chatbotFound && pathsToAudit.length >= 2) {
-    const negativeChatbotEvidence: EvidenceEntry = {
-      timestamp: auditTimestamp,
-      check_type: 'features',
-      source: 'dom',
-      url: normalizedUrl,
-      status: 'not_found',
-      confidence: 0.8,
-      snippet: `No chatbot detected across ${pathsToAudit.length} pages`
-    };
-    chatbotEvidence.push(negativeChatbotEvidence);
-    evidenceLog.push(negativeChatbotEvidence);
+  if (!chatbotFound) {
+    const successfulPageChecks = evidenceLog.filter(e => e.status !== 'error' && e.check_type === 'website').length;
+    if (successfulPageChecks >= 2) {
+      const negativeChatbotEvidence: EvidenceEntry = {
+        timestamp: auditTimestamp,
+        check_type: 'features',
+        source: 'dom',
+        url: normalizedUrl,
+        status: 'not_found',
+        confidence: 0.9, // High confidence with ≥2 checks
+        snippet: `No chatbot detected across ${successfulPageChecks} successfully checked pages`
+      };
+      chatbotEvidence.push(negativeChatbotEvidence);
+      evidenceLog.push(negativeChatbotEvidence);
+    } else {
+      const lowConfidenceEvidence: EvidenceEntry = {
+        timestamp: auditTimestamp,
+        check_type: 'features',
+        source: 'dom',
+        url: normalizedUrl,
+        status: 'not_found',
+        confidence: 0.5, // Lower confidence with <2 checks
+        snippet: `Limited evidence: only ${successfulPageChecks} pages successfully checked`
+      };
+      chatbotEvidence.push(lowConfidenceEvidence);
+      evidenceLog.push(lowConfidenceEvidence);
+    }
   }
 
   // Calculate overall confidence score

@@ -133,16 +133,31 @@ serve(async (req) => {
   }
 
   try {
-    const { userQuery, operation } = await req.json();
+    // Parse request body once and reuse it
+    const body = await req.json();
+    const { operation } = body;
 
     if (operation === 'plan') {
+      const { userQuery } = body;
+      if (!userQuery) {
+        return new Response(
+          JSON.stringify({ error: 'userQuery is required for plan operation' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       const plan = await planSearchWithGPT5(userQuery);
       return new Response(
         JSON.stringify({ plan }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else if (operation === 'synthesize') {
-      const { leads, evidenceLog } = await req.json();
+      const { leads, evidenceLog } = body;
+      if (!leads || !evidenceLog) {
+        return new Response(
+          JSON.stringify({ error: 'leads and evidenceLog are required for synthesize operation' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       const synthesis = await synthesizeWithGPT5(leads, evidenceLog);
       return new Response(
         JSON.stringify({ synthesis }),
