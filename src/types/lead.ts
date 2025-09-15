@@ -130,6 +130,59 @@ export interface Lead {
   verified_contacts?: Array<Record<string, any>>;
   enrichment_data?: Record<string, any>;
   evidence_log?: EvidenceEntry[];
+  // GPT-5 Enhancement fields
+  lead_score?: number;
+  scoring_breakdown?: {
+    base_score: number;
+    booking_points: number;
+    website_points: number;
+    review_points: number;
+    rating_points: number;
+    contact_points: number;
+    franchise_penalty: number;
+    technical_points: number;
+    total_adjustments: number;
+  };
+  confidence_reasons?: string[];
+  evidence_citations?: string[];
+  has_website?: boolean;
+  website_audit_data?: {
+    website_url: string;
+    has_website: boolean;
+    detected_features: {
+      online_booking: {
+        found: boolean;
+        evidence: EvidenceEntry[];
+        vendor_detected?: string;
+      };
+      chatbot: {
+        found: boolean;
+        evidence: EvidenceEntry[];
+        vendor_detected?: string;
+      };
+      payment_processor: {
+        found: boolean;
+        evidence: EvidenceEntry[];
+        vendor_detected?: string;
+      };
+      ssl_certificate: {
+        found: boolean;
+        evidence: EvidenceEntry[];
+      };
+      mobile_responsive: {
+        found: boolean;
+        evidence: EvidenceEntry[];
+      };
+    };
+    confidence_score: number;
+    audit_timestamp: string;
+  };
+  places_api_data?: any;
+  gpt5_synthesis?: {
+    confidence_reasons: string[];
+    recommendation: string;
+    ranked_summary: string;
+  };
 }
 
 export interface Note {

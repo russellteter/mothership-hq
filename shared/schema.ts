@@ -54,6 +54,12 @@ export const businesses = pgTable("businesses", {
   confidenceScore: numeric("confidence_score", { precision: 3, scale: 2 }),
   detectedFeatures: jsonb("detected_features"),
   verifiedContacts: jsonb("verified_contacts"),
+  // GPT-5 Enhancement fields
+  confidenceReasons: jsonb("confidence_reasons").array(),
+  leadScore: integer("lead_score"),
+  scoringBreakdown: jsonb("scoring_breakdown"),
+  websiteAuditData: jsonb("website_audit_data"),
+  placesApiData: jsonb("places_api_data"),
 }, (table) => ({
   nameIdx: index("idx_businesses_name").using("gin", sql`to_tsvector('simple', ${table.name})`),
   geoIdx: index("idx_businesses_geo").on(table.lat, table.lng),
@@ -89,6 +95,9 @@ export const signals = pgTable("signals", {
   sourceKey: text("source_key").notNull(), // connector that detected this signal
   detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().default(sql`now()`),
   overriddenByUser: boolean("overridden_by_user").default(false),
+  // GPT-5 Enhancement fields
+  metadata: jsonb("metadata"),
+  auditTimestamp: timestamp("audit_timestamp", { withTimezone: true }),
 }, (table) => ({
   confidenceCheck: check("confidence_check", sql`${table.confidence} >= 0 AND ${table.confidence} <= 1`),
   businessTypeIdx: index("idx_signals_business_type").on(table.businessId, table.type),

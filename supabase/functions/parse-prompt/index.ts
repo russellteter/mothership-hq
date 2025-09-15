@@ -6,6 +6,7 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -367,13 +368,53 @@ Return JSON with structure:
   "alternatives": [...alternative interpretations if ambiguous]
 }`;
 
+// GPT-5 Enhanced Pipeline Integration
+async function callGPT5Pipeline(userQuery: string, enrichmentFlags: any): Promise<any> {
+  try {
+    // Call GPT-5 planner for initial planning
+    const plannerResponse = await fetch(`${supabaseUrl}/functions/v1/gpt5-planner`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey
+      },
+      body: JSON.stringify({
+        userQuery,
+        operation: 'plan'
+      })
+    });
+
+    if (!plannerResponse.ok) {
+      throw new Error(`GPT-5 planner failed: ${plannerResponse.status}`);
+    }
+
+    const { plan } = await plannerResponse.json();
+    console.log('GPT-5 plan generated:', plan);
+
+    // Use plan to enhance the DSL with evidence-based approach
+    return {
+      enhanced_dsl: plan,
+      gpt5_enabled: true,
+      planning_success: true
+    };
+  } catch (error) {
+    console.error('GPT-5 pipeline error:', error);
+    return {
+      gpt5_enabled: false,
+      planning_success: false,
+      error: error.message
+    };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { prompt, options = {} } = await req.json();
+    const { prompt, options = {}, enrichment_flags = {} } = await req.json();
     
     if (!prompt || typeof prompt !== 'string') {
       return new Response(
@@ -383,6 +424,16 @@ serve(async (req) => {
     }
 
     console.log('Enhanced parsing for prompt:', prompt);
+    console.log('Enrichment flags:', enrichment_flags);
+
+    // Check if GPT-5 pipeline is requested
+    const useGPT5Pipeline = enrichment_flags.gpt5 === true;
+    let gpt5Enhancement = null;
+    
+    if (useGPT5Pipeline) {
+      console.log('Using GPT-5 reasoning pipeline');
+      gpt5Enhancement = await callGPT5Pipeline(prompt, enrichment_flags);
+    }
 
     // Extract basic patterns using regex
     const constraints = extractConstraints(prompt);
@@ -495,10 +546,19 @@ Output valid JSON with 'dsl', 'warnings', 'confidence', and optionally 'alternat
 
     // Add metadata about the parsing
     parsedResult.metadata = {
-      parser_version: '2.0',
+      parser_version: useGPT5Pipeline ? '3.0-gpt5' : '2.0',
       timestamp: new Date().toISOString(),
-      original_prompt: prompt
+      original_prompt: prompt,
+      enrichment_flags: enrichment_flags,
+      gpt5_enhancement: gpt5Enhancement
     };
+
+    // If GPT-5 enhancement was successful, merge the enhanced planning
+    if (gpt5Enhancement?.planning_success && gpt5Enhancement.enhanced_dsl) {
+      parsedResult.gpt5_plan = gpt5Enhancement.enhanced_dsl;
+      parsedResult.warnings = parsedResult.warnings || [];
+      parsedResult.warnings.push('Enhanced with GPT-5 reasoning and Google Places verification pipeline');
+    }
 
     console.log('Enhanced parse result:', parsedResult);
 

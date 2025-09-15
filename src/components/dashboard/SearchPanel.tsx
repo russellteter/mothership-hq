@@ -7,7 +7,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { SearchSuggestions } from './SearchSuggestions';
 
 interface SearchPanelProps {
-  onSearch: (prompt: string, options?: { mode?: 'standard' | 'enriched_only'; limit?: number; enrichment_flags?: { gpt5?: boolean; render?: boolean; verify_contacts?: boolean } }) => void;
+  onSearch: (prompt: string, options?: { mode?: 'standard' | 'enriched_only'; limit?: number; enrichment_flags?: { gpt5?: boolean; render?: boolean; verify_contacts?: boolean; reasoning_effort?: 'low' | 'medium' | 'high' } }) => void;
   isSearching: boolean;
 }
 
@@ -26,6 +26,8 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
   const [limit, setLimit] = useState(10);
   const [renderDom, setRenderDom] = useState(false);
   const [verifyContacts, setVerifyContacts] = useState(true);
+  const [useGPT5, setUseGPT5] = useState(false);
+  const [gpt5ReasoningLevel, setGPT5ReasoningLevel] = useState<'low' | 'medium' | 'high'>('medium');
 
   const debouncedPrompt = useDebounce(prompt, 300);
   
@@ -37,7 +39,12 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
         await onSearch(debouncedPrompt, {
           mode: enrichedOnly ? 'enriched_only' : 'standard',
           limit: Math.min(Math.max(limit, 1), 20),
-          enrichment_flags: enrichedOnly ? { gpt5: true, render: renderDom, verify_contacts: verifyContacts } : undefined
+          enrichment_flags: {
+            gpt5: enrichedOnly && useGPT5,
+            render: renderDom,
+            verify_contacts: verifyContacts,
+            reasoning_effort: gpt5ReasoningLevel
+          }
         });
       } finally {
         setIsSubmitting(false);
@@ -184,6 +191,25 @@ export function SearchPanel({ onSearch, isSearching }: SearchPanelProps) {
                   <input type="checkbox" className="rounded border-border" checked={verifyContacts} onChange={(e) => setVerifyContacts(e.target.checked)} disabled={!enrichedOnly || isSearching || isSubmitting} />
                   <span>Verify contacts</span>
                 </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input type="checkbox" className="rounded border-border" checked={useGPT5} onChange={(e) => setUseGPT5(e.target.checked)} disabled={!enrichedOnly || isSearching || isSubmitting} />
+                  <span>GPT-5 reasoning & synthesis</span>
+                </label>
+                {useGPT5 && enrichedOnly && (
+                  <div className="ml-6 mt-1">
+                    <label className="text-xs text-muted-foreground">Reasoning Level</label>
+                    <select 
+                      className="w-full mt-1 px-2 py-1 bg-background border border-border rounded-md text-xs"
+                      value={gpt5ReasoningLevel}
+                      onChange={(e) => setGPT5ReasoningLevel(e.target.value as 'low' | 'medium' | 'high')}
+                      disabled={isSearching || isSubmitting}
+                    >
+                      <option value="low">Low (faster, planning)</option>
+                      <option value="medium">Medium (balanced)</option>
+                      <option value="high">High (thorough)</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
             
