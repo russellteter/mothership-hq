@@ -172,3 +172,23 @@ export interface EvidenceEntry {
   status: 'found' | 'not_found' | 'error';
   confidence: number; // 0-1
 }
+
+// Additional types for storage interface
+export interface DashboardStats {
+  totalLeads: number;
+  qualifiedLeads: number;
+  ignoredLeads: number;
+  newLeads: number;
+  totalSearches: number;
+  recentSearches: SearchJob[];
+}
+
+export interface SavedSearch {
+  id: string;
+  user_id: string;
+  name: string;
+  dsl_json: LeadQuery;
+  search_job_id?: string;
+  created_at: string;
+  updated_at: string;
+}

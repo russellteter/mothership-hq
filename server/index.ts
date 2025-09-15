@@ -3,12 +3,16 @@ import cors from 'cors';
 import { db } from './db.js';
 import * as schema from '../shared/schema.js';
 import { eq, desc, and, sql } from 'drizzle-orm';
+import routes from './routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Use storage-based routes
+app.use('/api', routes);
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
