@@ -146,6 +146,7 @@ export function useLeadSearch() {
         setSearchResults(fakeLeads);
         setCurrentSearchJob(prev => prev ? { ...prev, status: 'completed' } : null);
         setIsSearching(false);
+        toast({ title: 'Dev Mode', description: 'Using E2E_NO_AUTH mock enriched leads' });
         return;
       }
 
@@ -169,25 +170,45 @@ export function useLeadSearch() {
       const leadType = categorizeLeadType(dsl);
       
       const isEnrichedOnly = options?.mode === 'enriched_only';
-      const functionName = isEnrichedOnly ? 'search-enriched-leads' : 'search-leads';
-      const requestBody: any = isEnrichedOnly ? {
-        dsl_json: dsl,
-        original_prompt: originalPrompt,
-        options: options?.enrichment_flags,
-        limit: Math.min(options?.limit || 20, 20),
-        custom_name: searchName,
-        search_tags: searchTags,
-        lead_type: leadType
-      } : {
-        dsl,
-        original_prompt: originalPrompt,
-        custom_name: searchName,
-        search_tags: searchTags,
-        lead_type: leadType,
-        scoring_weights: (dsl as any).scoring_weights
-      };
 
-      // Start search job using new API
+      // Enriched path: use Supabase edge function for BOTH job creation and polling
+      if (isEnrichedOnly) {
+        try {
+          const { data: startData, error: startErr } = await supabase.functions.invoke('search-enriched-leads', {
+            body: {
+              dsl_json: dsl,
+              original_prompt: originalPrompt,
+              options: options?.enrichment_flags,
+              limit: Math.min(options?.limit || 20, 20),
+              custom_name: searchName,
+              search_tags: searchTags,
+              lead_type: leadType
+            }
+          });
+          if (startErr || !startData?.job_id) {
+            throw new Error(startErr?.message || 'Failed to start enriched search');
+          }
+
+          const jobId = startData.job_id as string;
+          setCurrentSearchJob({ 
+            id: jobId, 
+            dsl_json: dsl, 
+            created_at: new Date().toISOString(),
+            status: 'running',
+            custom_name: searchName,
+            original_prompt: originalPrompt,
+            search_tags: searchTags
+          });
+
+          await pollForEnrichedResults(jobId);
+          return;
+        } catch (e) {
+          console.error('Failed to start enriched search via Supabase:', e);
+          throw e;
+        }
+      }
+
+      // Standard path: keep using local/mock API
       const data = await api.searchLeads({
         dsl,
         original_prompt: originalPrompt,
@@ -195,12 +216,10 @@ export function useLeadSearch() {
         search_tags: searchTags,
         lead_type: leadType
       });
-      
       if (!data || !data.job_id) {
         console.error('Invalid response from API:', data);
         throw new Error('Invalid response from search service - no job ID returned');
       }
-
       const jobId = data.job_id;
       setCurrentSearchJob({ 
         id: jobId, 
@@ -211,13 +230,7 @@ export function useLeadSearch() {
         original_prompt: originalPrompt,
         search_tags: searchTags
       });
-
-      // Poll for results
-      if (isEnrichedOnly) {
-        await pollForEnrichedResults(jobId);
-      } else {
-        await pollForResults(jobId);
-      }
+      await pollForResults(jobId);
       
     } catch (error) {
       console.error('Search error details:', error);
