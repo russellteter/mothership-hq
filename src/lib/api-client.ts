@@ -116,11 +116,24 @@ export class APIClient {
         order: (orderBy: string, options?: any) => this.handleTableQuery(table, 'select', { columns, order: { orderBy, options } }),
       }),
       insert: (data: any) => ({
-        select: () => this.handleTableQuery(table, 'insert', { data, select: true }),
+        select: () => ({
+          single: () => this.handleTableQuery(table, 'insert', { data, select: true, single: true }),
+          ...this.handleTableQuery(table, 'insert', { data, select: true }),
+        }),
+      }),
+      upsert: (data: any) => ({
+        select: () => ({
+          single: () => this.handleTableQuery(table, 'upsert', { data, select: true, single: true }),
+          ...this.handleTableQuery(table, 'upsert', { data, select: true }),
+        }),
       }),
       update: (data: any) => ({
         eq: (column: string, value: string) => ({
-          select: () => this.handleTableQuery(table, 'update', { data, eq: { column, value }, select: true }),
+          select: () => ({
+            single: () => this.handleTableQuery(table, 'update', { data, eq: { column, value }, select: true, single: true }),
+            ...this.handleTableQuery(table, 'update', { data, eq: { column, value }, select: true }),
+          }),
+          error: null,
         }),
       }),
       delete: () => ({
@@ -292,7 +305,7 @@ export class APIClient {
   }
 
   functions = {
-    invoke: () => Promise.resolve({ data: null, error: null }),
+    invoke: (functionName: string, options?: any) => Promise.resolve({ data: { leads: [], search_job: { status: 'completed' } }, error: null }),
   };
 }
 

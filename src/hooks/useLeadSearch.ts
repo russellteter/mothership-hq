@@ -4,6 +4,7 @@ import { Lead, LeadQuery, ParseResult, SearchJob } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
 import { generateSearchName, generateSearchTags, categorizeLeadType } from './useSearchNaming';
 import { useSearchCache, useRecentSearches } from './useSearchCache';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EnrichmentFlags {
   gpt5?: boolean;
@@ -354,10 +355,7 @@ export function useLeadSearch() {
         // Skip auth check during migration
 
         const { data: resultData, error } = await supabase.functions.invoke('get-search-results', {
-          body: { search_job_id: jobId },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
-          }
+          body: { search_job_id: jobId }
         });
 
         if (error) {
@@ -367,7 +365,13 @@ export function useLeadSearch() {
         if (resultData.search_job.status === 'completed') {
           // expect enriched leads only
           setSearchResults(resultData.leads);
-          setCurrentSearchJob(resultData.search_job);
+          setCurrentSearchJob({
+            id: jobId,
+            status: 'completed',
+            dsl_json: {},
+            created_at: new Date().toISOString(),
+            ...resultData.search_job
+          });
           toast({
             title: "Enriched Search Completed",
             description: `Returned ${resultData.leads.length} enriched leads`
@@ -392,13 +396,14 @@ export function useLeadSearch() {
 
   const updateLeadStatus = useCallback(async (leadId: string, status: 'new' | 'qualified' | 'ignored'): Promise<void> => {
     try {
-      const { error } = await supabase
+      const result = await supabase
         .from('status_logs')
         .insert({
           business_id: leadId,
           status: status
         });
 
+      const error = result?.error;
       if (error) throw error;
 
       // Update local state
@@ -427,13 +432,14 @@ export function useLeadSearch() {
 
   const addNote = useCallback(async (leadId: string, text: string): Promise<void> => {
     try {
-      const { error } = await supabase
+      const result = await supabase
         .from('notes')
         .insert({
           business_id: leadId,
           text: text
         });
 
+      const error = result?.error;
       if (error) throw error;
 
       toast({
@@ -454,21 +460,25 @@ export function useLeadSearch() {
   const addTag = useCallback(async (leadId: string, tagLabel: string): Promise<void> => {
     try {
       // First, create or get the tag
-      const { data: tag, error: tagError } = await supabase
+      const tagResult = await supabase
         .from('tags')
         .upsert({ label: tagLabel })
         .select()
         .single();
 
+      const tag = tagResult?.data;
+      const tagError = tagResult?.error;
       if (tagError) throw tagError;
 
       // Then, create the business-tag relationship
-      const { error: relationError } = await supabase
+      const relationResult = await supabase
         .from('business_tags')
         .insert({
           business_id: leadId,
           tag_id: tag.id
         });
+
+      const relationError = relationResult?.error;
 
       if (relationError && !relationError.message.includes('duplicate')) {
         throw relationError;
